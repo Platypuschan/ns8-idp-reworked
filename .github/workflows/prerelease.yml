@@ -26,7 +26,7 @@ jobs:
       candidate: ${{ steps.images.outputs.candidate }}
       version: ${{ steps.images.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: pip install requests jsonschema
       - run: python3 -m unittest discover -s tests -p 'test_*.py' -v
       - run: sudo apt-get update && sudo apt-get install -y podman skopeo
@@ -82,7 +82,7 @@ jobs:
       contents: write
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y skopeo
       - name: Promote tested digests and create the prerelease
         env:
