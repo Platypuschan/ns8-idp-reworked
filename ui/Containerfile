@@ -1,6 +1,7 @@
 FROM node:26-bookworm
-RUN corepack enable \
-    && yarn set version stable
+# Match packageManager in package.json; available even before VS Code mounts it.
+# --force replaces the base image's legacy Yarn shim, not project dependencies.
+RUN npm install --global --force @yarnpkg/cli-dist@4.18.1
 WORKDIR /app
 ENV NODE_OPTIONS=--openssl-legacy-provider
 EXPOSE 8080

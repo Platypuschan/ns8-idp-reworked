@@ -18,6 +18,17 @@ class UIBuildTests(unittest.TestCase):
         self.assertIn('yarn build', bootstrap)
         self.assertNotIn('corepack enable', recipe + bootstrap + (ROOT / 'build-images.sh').read_text())
 
+    def test_developer_image_provides_project_pinned_yarn_without_corepack(self):
+        version = json.loads((ROOT / 'ui/package.json').read_text())['packageManager'].removeprefix('yarn@')
+        recipe = (ROOT / 'ui/Containerfile').read_text()
+        self.assertIn(f'npm install --global --force @yarnpkg/cli-dist@{version}', recipe)
+        self.assertNotIn('corepack', recipe)
+        self.assertNotIn('yarn set version stable', recipe)
+        self.assertIn('WORKDIR /app', recipe)
+        self.assertIn('ENV NODE_OPTIONS=--openssl-legacy-provider', recipe)
+        self.assertIn('EXPOSE 8080', recipe)
+        self.assertIn('ENTRYPOINT ["./container-entrypoint.sh"]', recipe)
+
     def test_alternate_builder_uses_production_image(self):
         script = (ROOT / 'build-images.sh').read_text()
         self.assertIn('Containerfile', script)
