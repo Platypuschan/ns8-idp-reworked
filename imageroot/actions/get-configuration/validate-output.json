@@ -12,7 +12,11 @@
     "type": "object",
     "required": [
         "host",
-        "lets_encrypt"
+        "lets_encrypt",
+        "restrict_admin_console",
+        "directory_groups_only",
+        "account_home_redirect",
+        "strict_client_uris"
     ],
     "properties": {
         "host": {
@@ -21,6 +25,22 @@
         },
         "lets_encrypt": {
             "description": "A Let's Encrypt certificate is requested for the host name",
+            "type": "boolean"
+        },
+        "restrict_admin_console": {
+            "description": "Allow the Keycloak admin console from the node only",
+            "type": "boolean"
+        },
+        "directory_groups_only": {
+            "description": "Ignore local Keycloak group memberships. Required by client access policies",
+            "type": "boolean"
+        },
+        "account_home_redirect": {
+            "description": "Lead the host root to the account console instead of the admin console",
+            "type": "boolean"
+        },
+        "strict_client_uris": {
+            "description": "Accept only exact HTTPS or native client endpoints at client registration",
             "type": "boolean"
         }
     }

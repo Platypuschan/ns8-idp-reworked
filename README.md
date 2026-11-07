@@ -1,6 +1,6 @@
 # ns8-idp-reworked
 
-Veröffentlichte Vorabversion **0.1.0-rc.5**. Eigenständiges angepasstes Modul mit optionaler Client-Gruppenregel, einstellbar auf der Seite **Zugriff**, optionaler Tokenlaufzeit und optionaler [Anmeldung mit Gerätezertifikat](docs/CERTIFICATES.md); keine externen Identitätsanbieter; kein Stable-/Katalogrelease.
+Vorbereitete Vorabversion **0.1.0-rc.6**; zuletzt veröffentlicht ist **0.1.0-rc.5**. Eigenständiges angepasstes Modul mit optionaler Client-Gruppenregel, einstellbar auf der Seite **Zugriff**, optionaler Tokenlaufzeit und optionaler [Anmeldung mit Gerätezertifikat](docs/CERTIFICATES.md); keine externen Identitätsanbieter; kein Stable-/Katalogrelease.
 
 [Prüfnachweise und Image-Digests](docs/RELEASE-0.1.0-rc.5.md) ([0.1.0-rc.3](docs/RELEASE-0.1.0-rc.3.md), [0.1.0-rc.2](docs/RELEASE-0.1.0-rc.2.md), [0.1.0-rc.1](docs/RELEASE-0.1.0-rc.1.md)) · [Release-Ablauf](docs/PRERELEASE.md) · [Gitea-SSO-Prüfung](docs/GITEA-SSO.md)
 
@@ -10,12 +10,12 @@ Single sign-on for NethServer 8 applications, based on Keycloak
 
 Install the module (application) on cluster node 1:
 
-    add-module ghcr.io/platypuschan/idp-reworked:0.1.0-rc.2 1
+    add-module ghcr.io/platypuschan/idp-reworked:0.1.0-rc.5 1
 
 The output of the command will return the module identifier:
 Output example:
 
-    {"module_id": "idp-reworked1", "image_name": "idp-reworked", "image_url": "ghcr.io/platypuschan/idp-reworked:0.1.0-rc.2"}
+    {"module_id": "idp-reworked1", "image_name": "idp-reworked", "image_url": "ghcr.io/platypuschan/idp-reworked:0.1.0-rc.5"}
 
 ## Configure
 
@@ -395,6 +395,8 @@ takes effect immediately: the core has already reloaded the unit files.
 before it existed.
 
 ## Running tests locally
+
+Site policies (admin console, group memberships, host root, client addresses) are switched on the Settings page, see [ADR 0004](docs/decisions/0004-site-policies.md).
 
 Optional personal device certificate sign-in is documented in
 [CERTIFICATES.md](docs/CERTIFICATES.md). It includes an administrator-only

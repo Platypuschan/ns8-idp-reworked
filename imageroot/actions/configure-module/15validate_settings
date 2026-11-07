@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2026 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+#
+# Client access policies evaluate directory memberships only: without them
+# the policies would deny every sign-in. The gate stays closed either way,
+# so a stopped Keycloak, which has nothing to check, is not an error.
+#
+
+import json
+import subprocess
+import sys
+
+import idpaccess
+import idprealm
+import idpsettings
+import kcadmin
+
+request = json.load(sys.stdin)
+if request.get('directory_groups_only', True) or not idpsettings.get('directory_groups_only'):
+    sys.exit(0)
+if subprocess.run(['systemctl', '--user', '-q', 'is-active', 'keycloak.service']).returncode != 0:
+    sys.exit(0)
+
+with idprealm.realms_lock():
+    kc = kcadmin.agent_client()
+    for realm in kcadmin.managed_realms(kc):
+        for client in kc.get(f'/{realm}/clients'):
+            attributes = client.get('attributes') or {}
+            if idpaccess.restricted(client) or attributes.get('ns8.access_required') == 'true':
+                idprealm.fail_validation('directory_groups_only', False, 'access_policies_in_use')

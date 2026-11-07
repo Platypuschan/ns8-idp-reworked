@@ -11,6 +11,9 @@ After=idp.service postgres.service keycloak-init.service
 
 [Service]
 Environment=PODMAN_SYSTEMD_UNIT=%n
+# The ns8 theme leads the host root to the account console of the user
+# domain realm. configure-module overrides it in the module environment
+Environment=IDP_WELCOME_THEME=ns8
 EnvironmentFile=%E/state/environment
 WorkingDirectory=%E/state
 Restart=always
@@ -37,6 +40,7 @@ ExecStart=/usr/bin/podman run \
     --replace --name=%N \
     --env-file=%E/etc/keycloak.env \
     --env-file=./passwords.env \
+    --env=KC_SPI_THEME__WELCOME_THEME=${IDP_WELCOME_THEME} \
     ${IDP_REWORKED_KEYCLOAK_IMAGE} \
         start --optimized \
         --hostname=https://${IDP_HOSTNAME}

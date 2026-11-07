@@ -21,6 +21,7 @@ import urllib.parse
 import agent
 import agent.ldapproxy
 import idpcert
+import idpsettings
 import kcadmin
 
 LDAP_COMPONENT_NAME = "ns8-ldap"
@@ -134,7 +135,7 @@ def group_mapper_config(domain):
         "group.name.ldap.attribute": ["cn"],
         "groups.ldap.filter": [lp.get_ldap_groups_search_filter_clause(domain)],
         "preserve.group.inheritance": ["false"],
-        "mode": ["LDAP_ONLY"],
+        "mode": ["LDAP_ONLY" if idpsettings.get("directory_groups_only") else "READ_ONLY"],
         "groups.path": ["/"],
         "user.roles.retrieve.strategy": ["LOAD_GROUPS_BY_MEMBER_ATTRIBUTE"],
         "drop.non.existing.groups.during.sync": ["false"],
@@ -326,7 +327,8 @@ def ensure_client(kc, realm, module_id, redirect_uris=(), post_logout_redirect_u
     secret. The secret is generated on creation, and when rotate_secret
     is set. The access token lifespan, in seconds, is kept unless given;
     None restores the realm default."""
-    validate_client_endpoints(redirect_uris, post_logout_redirect_uris, web_origins, audience)
+    if idpsettings.get("strict_client_uris"):
+        validate_client_endpoints(redirect_uris, post_logout_redirect_uris, web_origins, audience)
     rep = {
         "clientId": module_id,
         "name": module_id,

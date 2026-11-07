@@ -107,6 +107,34 @@
                 </NsInlineNotification>
               </cv-column>
             </cv-row>
+            <h4 class="mg-top-lg mg-bottom-md">
+              {{ $t("settings.policies") }}
+            </h4>
+            <NsToggle
+              v-for="setting in policySettings"
+              :key="setting"
+              :value="setting"
+              :label="$t('settings.' + setting)"
+              v-model="policies[setting]"
+              :disabled="loadingUi"
+              :ref="setting"
+            >
+              <template #tooltip>
+                {{ $t("settings." + setting + "_tooltip") }}
+              </template>
+              <template slot="text-left">{{
+                $t("settings.disabled")
+              }}</template>
+              <template slot="text-right">{{
+                $t("settings.enabled")
+              }}</template>
+            </NsToggle>
+            <NsInlineNotification
+              v-if="error.directory_groups_only"
+              kind="error"
+              :title="error.directory_groups_only"
+              :showCloseButton="false"
+            />
             <cv-row v-if="error.configureModule">
               <cv-column>
                 <NsInlineNotification
@@ -163,6 +191,18 @@ export default {
       host: "",
       isLetsEncryptEnabled: false,
       isLetsEncryptCurrentlyEnabled: false,
+      policySettings: [
+        "restrict_admin_console",
+        "directory_groups_only",
+        "account_home_redirect",
+        "strict_client_uris",
+      ],
+      policies: {
+        restrict_admin_console: true,
+        directory_groups_only: true,
+        account_home_redirect: true,
+        strict_client_uris: true,
+      },
       status: {},
       certificateErrorDetails: [],
       loading: {
@@ -176,6 +216,7 @@ export default {
         configureModule: "",
         host: "",
         lets_encrypt: "",
+        directory_groups_only: "",
       },
     };
   },
@@ -257,6 +298,9 @@ export default {
       this.host = config.host;
       this.isLetsEncryptEnabled = config.lets_encrypt;
       this.isLetsEncryptCurrentlyEnabled = config.lets_encrypt;
+      for (const setting of this.policySettings) {
+        this.policies[setting] = config[setting];
+      }
       this.loading.getConfiguration = false;
       this.focusElement("host");
     },
@@ -376,6 +420,7 @@ export default {
           data: {
             host: this.host,
             lets_encrypt: this.isLetsEncryptEnabled,
+            ...this.policies,
           },
           extra: {
             title: this.$t("settings.configure_instance", {

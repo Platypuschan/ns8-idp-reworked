@@ -15,7 +15,8 @@ import os
 import sys
 
 import agent
-from idp_routes import certificate_transport, restrict_admin
+from idp_routes import certificate_transport, remove_admin_route, restrict_admin
+import idpsettings
 
 request = json.load(sys.stdin)
 certificate_active = agent.get_route(os.environ['MODULE_ID']).get('client_certificates', False)
@@ -30,10 +31,14 @@ agent.set_route({
     "lets_encrypt_cleanup": True,
 })
 
-restrict_admin(request["host"], request.get("lets_encrypt", False))
+restricted_admin = idpsettings.get("restrict_admin_console", request)
+if restricted_admin:
+    restrict_admin(request["host"], request.get("lets_encrypt", False))
+else:
+    remove_admin_route()
 
 # Preserve certificate transport when the hostname/LE setting changes.
 # This action also runs with Keycloak stopped: consult the existing route,
 # then keycloak-post-start reconciles the authoritative realm state.
 if certificate_active or os.path.isfile('x509-proxy-secret'):
-    certificate_transport(certificate_active, request['host'], request.get('lets_encrypt', False))
+    certificate_transport(certificate_active, request['host'], request.get('lets_encrypt', False), restricted_admin)

@@ -15,7 +15,17 @@
         "test_field": "Testfeld",
         "configure_instance": "{instance} konfigurieren",
         "save": "Speichern",
-        "title": "Einstellungen"
+        "title": "Einstellungen",
+        "policies": "Betriebsrichtlinien",
+        "restrict_admin_console": "Admin-Konsole nur von diesem Knoten",
+        "restrict_admin_console_tooltip": "Die Keycloak-Admin-Konsole ist von außen nicht erreichbar. Das Modul verwaltet Realms und Clients weiterhin. Deaktivieren öffnet die Konsole auf dem Hostnamen.",
+        "directory_groups_only": "Gruppenmitgliedschaften nur aus dem Verzeichnis",
+        "directory_groups_only_tooltip": "Lokale Keycloak-Gruppenmitgliedschaften werden ignoriert. Zugriffsregeln auf der Seite Zugriff benötigen diese Einstellung.",
+        "account_home_redirect": "Stamm-URL führt zur Kontoseite",
+        "account_home_redirect_tooltip": "Die Stamm-URL öffnet die Kontoseite der Benutzerdomäne, bei mehreren Realms eine neutrale Seite. Deaktiviert führt sie zur Admin-Konsole; um diese von außen zu erreichen, auch die Einschränkung oben deaktivieren.",
+        "strict_client_uris": "Strenge Anwendungsadressen",
+        "strict_client_uris_tooltip": "Registrierte Anwendungen brauchen exakte HTTPS- oder native Callback-Adressen ohne Platzhalter. Gilt für neue Registrierungen.",
+        "access_policies_in_use": "Zuerst die Zugriffsregeln entfernen: Sie benötigen Mitgliedschaften nur aus dem Verzeichnis."
     },
     "access": {
         "title": "Zugriff",

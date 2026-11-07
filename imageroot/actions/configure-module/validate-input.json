@@ -24,6 +24,22 @@
             "description": "Request a Let's Encrypt certificate for the host name",
             "type": "boolean",
             "default": false
+        },
+        "restrict_admin_console": {
+            "description": "Allow the Keycloak admin console from the node only",
+            "type": "boolean"
+        },
+        "directory_groups_only": {
+            "description": "Ignore local Keycloak group memberships. Required by client access policies",
+            "type": "boolean"
+        },
+        "account_home_redirect": {
+            "description": "Lead the host root to the account console instead of the admin console",
+            "type": "boolean"
+        },
+        "strict_client_uris": {
+            "description": "Accept only exact HTTPS or native client endpoints at client registration",
+            "type": "boolean"
         }
     }
 }

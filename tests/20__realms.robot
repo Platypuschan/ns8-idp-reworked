@@ -178,6 +178,8 @@ Restrict a client to a group
     Should Not Be True    ${state.live['user_allowed']}
     &{error} =    Run validation    module/${module_id}/alter-realm-client    {"domain": "${USER_DOMAIN}", "client_id": "${FAKE_APP}", "access_group": "nosuchgroup"}
     Should Be Equal    ${error.error}    group_not_found
+    &{error} =    Run validation    module/${module_id}/configure-module    {"host": "${IDP_HOST}", "lets_encrypt": false, "directory_groups_only": false}
+    Should Be Equal    ${error.error}    access_policies_in_use
     Run task    module/${module_id}/alter-realm-client    {"domain": "${USER_DOMAIN}", "client_id": "${FAKE_APP}", "access_group": null}    decode_json=${FALSE}
     &{client} =    Client    ${USER_DOMAIN}    ${FAKE_APP}
     Should Be Equal    ${client.access_group}    ${NONE}

@@ -1,5 +1,7 @@
 # NS8 Traefik client-certificate capability
 
+The module [`traefik-reworked`](https://github.com/Platypuschan/ns8-traefik-reworked) ships this change. These files stay as the test fixture of this repository.
+
 Stock `NethServer/ns8-traefik` at commit
 `21fa9f2e0b14ac84caed6fb4b68bb962d364a5b7` does not expose client certificate
 request/forwarding through `set-route`. Merely adding a Keycloak authenticator

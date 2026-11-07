@@ -27,7 +27,7 @@ jobs:
       version: ${{ steps.images.outputs.version }}
     steps:
       - uses: actions/checkout@v7
-      - run: pip install requests jsonschema
+      - run: pip install requests jsonschema cryptography robotframework robotframework-sshlibrary
       - run: python3 -m unittest discover -s tests -p 'test_*.py' -v
       - run: sudo apt-get update && sudo apt-get install -y podman skopeo
       - name: Build isolated candidate images

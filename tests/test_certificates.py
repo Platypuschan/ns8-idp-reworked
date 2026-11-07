@@ -18,6 +18,7 @@ from unittest.mock import Mock
 import jsonschema
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.append(str(ROOT / 'imageroot/pypkg'))
 spec = importlib.util.spec_from_file_location('cert_module', ROOT / 'imageroot/pypkg/idpcert.py')
 cert = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cert)
@@ -152,7 +153,7 @@ class CertificateTests(unittest.TestCase):
         agent.set_route = set_route
         spec = importlib.util.spec_from_file_location('cert_routes', ROOT/'imageroot/pypkg/idp_routes.py')
         module = importlib.util.module_from_spec(spec)
-        with patch.dict(sys.modules, {'agent':agent, 'idpcert':cert}):
+        with patch.dict(sys.modules, {'agent':agent, 'agent.tasks':types.ModuleType('agent.tasks'), 'idpcert':cert}):
             spec.loader.exec_module(module)
         module.time = types.SimpleNamespace(monotonic=Mock(side_effect=[0, 21]), sleep=lambda _:None)
         return module, calls
@@ -214,6 +215,14 @@ class CertificateTests(unittest.TestCase):
         module.time = types.SimpleNamespace(monotonic=Mock(side_effect=[0, 21]), sleep=lambda _:None)
         self.transport(module, True, 'other.test', True)
         self.assertEqual(len(calls), 4)
+
+    def test_without_the_admin_route_only_the_host_route_changes(self):
+        routes = {'idp1': copy.deepcopy(self.ORIGINAL['idp1'])}
+        module, calls = self.route_module(routes)
+        with patch.dict(os.environ, {'IDP_RESTRICT_ADMIN_CONSOLE': '0'}):
+            self.transport(module, True)
+        self.assertEqual([call['instance'] for call in calls], ['idp1'])
+        self.assertTrue(routes['idp1']['client_certificates'])
 
     def test_account_state_is_read_live_for_each_directory_schema(self):
         for active_directory, attribute in ((True, 'accountExpires'), (False, 'pwdAccountLockedTime')):

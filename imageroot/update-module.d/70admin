@@ -2,7 +2,8 @@
 import os
 import agent
 from idp_routes import restrict_admin
-if os.getenv('IDP_HOSTNAME'):
+import idpsettings
+if os.getenv('IDP_HOSTNAME') and idpsettings.get('restrict_admin_console'):
     route = agent.get_route(os.environ['MODULE_ID'])
     restrict_admin(os.environ['IDP_HOSTNAME'], route.get('lets_encrypt', False))
     # Preserve identical TLS options on the higher-priority /admin route.

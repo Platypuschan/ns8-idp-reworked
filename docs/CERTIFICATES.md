@@ -8,9 +8,16 @@ requests. This does not replace the Vaultwarden master password or vault unlock.
 
 ## Prerequisite
 
-The [NS8 Traefik capability patch](../integrations/ns8-traefik/README.md) is
-required. The stock route API cannot request/forward client certificates. The
-module explicitly refuses enablement without an acknowledged capability.
+The module [`traefik-reworked`](https://github.com/Platypuschan/ns8-traefik-reworked)
+is required, because the stock route API cannot request or forward client
+certificates. Replace the Traefik instance of the node first:
+
+```sh
+api-cli run cluster/update-module --data '{"module_url":"ghcr.io/platypuschan/traefik-reworked:4.2.5-reworked.1","instances":["traefik1"]}'
+```
+
+The instance then follows that repository, and core updates skip it. This module
+refuses to enable certificate sign-in without an acknowledged capability.
 Do not enable on installations requiring form-based OTP as a second factor
 without reviewing the certificate flow; this method is an alternative to that
 form branch. See [the trust model and limitations](decisions/0003-device-certificates.md).
@@ -69,9 +76,9 @@ which request `prompt=login` always show the password form; use it to sign in wi
 another account on an enrolled device.
 
 If the page reports that sign-in is enabled but not effective, the proxy lost the
-capability (usually a Traefik update replaced the patched module) or the realm's
-browser flow was changed. Password sign-in keeps working. Reinstall the capability
-and restart the module, or restore the flow.
+capability (`traefik-reworked` was replaced) or the realm's browser flow was
+changed. Password sign-in keeps working. Reinstall the module and restart this
+one, or restore the flow.
 
 The actions are `get-certificates` (`domain`) and `alter-certificates`
 (`domain`, `operation`: `enable`, `disable`, `enroll`, `revoke`). Enrollment adds

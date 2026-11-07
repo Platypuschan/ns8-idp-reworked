@@ -10,8 +10,10 @@ import os
 import sys
 
 import agent
+import idpsettings
 
 json.dump({
     "host": os.getenv("IDP_HOSTNAME", ""),
     "lets_encrypt": agent.get_route(os.environ["MODULE_ID"]).get("lets_encrypt", False),
+    **idpsettings.current(),
 }, fp=sys.stdout)

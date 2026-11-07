@@ -30,7 +30,17 @@
         "host_already_used": "The host name is already used by another application",
         "host_is_node_fqdn": "The host name of the node cannot be used",
         "enabled": "Enabled",
-        "disabled": "Disabled"
+        "disabled": "Disabled",
+        "policies": "Site policies",
+        "restrict_admin_console": "Admin console from this node only",
+        "restrict_admin_console_tooltip": "The Keycloak admin console is unreachable from outside. The module keeps managing realms and clients. Disable it to open the console on the host name.",
+        "directory_groups_only": "Group memberships from the directory only",
+        "directory_groups_only_tooltip": "Local Keycloak group memberships are ignored. Client access rules on the Access page need this setting.",
+        "account_home_redirect": "Host root leads to the account page",
+        "account_home_redirect_tooltip": "The host root opens the account page of the user domain, or a neutral page with several realms. When disabled it leads to the admin console, so also disable the restriction above if you want to reach it from outside.",
+        "strict_client_uris": "Strict application addresses",
+        "strict_client_uris_tooltip": "Registered applications must use exact HTTPS or native callback addresses, without wildcards. Applies to new registrations.",
+        "access_policies_in_use": "Remove the client access rules first: they need memberships from the directory only."
     },
     "access": {
         "title": "Access",

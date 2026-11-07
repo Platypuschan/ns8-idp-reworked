@@ -4,7 +4,9 @@ import copy
 import sys
 import time
 import agent
+import agent.tasks
 import idpcert
+import idpsettings
 
 def restrict_admin(host, lets_encrypt=False):
     agent.set_route({
@@ -13,6 +15,17 @@ def restrict_admin(host, lets_encrypt=False):
         'host': host, 'path': '/admin', 'ip_allowlist': ['127.0.0.1/32', '::1/128'],
         'http2https': True, 'lets_encrypt': lets_encrypt,
     })
+
+
+def remove_admin_route():
+    """Drop the restriction: the host route then also serves /admin."""
+    instance = os.environ['MODULE_ID'] + '-admin'
+    traefik = agent.resolve_agent_id('traefik@node')
+    if traefik and agent.get_route(instance):
+        response = agent.tasks.run(agent_id=traefik, action='delete-route',
+                                   data={'instance': instance},
+                                   extra={'isNotificationHidden': True})
+        agent.assert_exp(response['exit_code'] == 0, 'Unable to remove admin route')
 
 
 def _write_routes(routes):
@@ -43,16 +56,18 @@ def _in_sync(routes, proof, host, lets_encrypt):
                for route in routes)
 
 
-def certificate_transport(value, host=None, lets_encrypt=None):
+def certificate_transport(value, host=None, lets_encrypt=None, admin_route=None):
     """Require an acknowledged Traefik capability, never trust ignored input.
 
     Both routers for the hostname must use the same TLS options; otherwise
     Traefik falls back to default options because TLS precedes path routing.
     """
     host = host or os.environ['IDP_HOSTNAME']
+    if admin_route is None:
+        admin_route = idpsettings.get('restrict_admin_console')
     original = [(os.environ['MODULE_ID'] + suffix,
                  agent.get_route(os.environ['MODULE_ID'] + suffix))
-                for suffix in ('', '-admin')]
+                for suffix in (('', '-admin') if admin_route else ('',))]
     if lets_encrypt is None and not all(old for _, old in original):
         # The route is the only record of the Let's Encrypt choice: guessing
         # it would silently switch the hostname to the default certificate.
