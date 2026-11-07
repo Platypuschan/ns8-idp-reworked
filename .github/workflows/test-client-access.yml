@@ -11,7 +11,7 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.15'
-      - run: pip install requests jsonschema cryptography pyyaml
+      - run: pip install requests jsonschema cryptography pyyaml robotframework robotframework-sshlibrary
       - run: python3 -m unittest discover -s tests -p 'test_*.py' -v
       - run: podman build -f tests/client-access/Samba.Containerfile -t localhost/ns8-vaultwarden-test-samba tests/client-access
       - run: podman build -f tests/client-access/Containerfile -t localhost/ns8-idp-client-access-test .
