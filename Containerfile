@@ -2,7 +2,7 @@ FROM docker.io/library/node:26.12.1-slim AS ui
 WORKDIR /src
 ENV NODE_OPTIONS=--openssl-legacy-provider
 COPY ui/ ./
-RUN corepack enable && yarn install --immutable && yarn build
+RUN sh ./build.sh
 FROM scratch
 COPY imageroot /imageroot
 COPY --from=ui /src/dist /ui

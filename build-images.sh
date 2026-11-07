@@ -18,18 +18,18 @@ reponame="idp-reworked"
 # Create a new empty container image
 container=$(buildah from scratch)
 
-# Reuse existing nodebuilder-idp container, to speed up builds
-if ! buildah containers --format "{{.ContainerName}}" | grep -q nodebuilder-idp; then
-    echo "Pulling NodeJS runtime..."
-    buildah from --name nodebuilder-idp -v "${PWD}:/usr/src:Z" docker.io/library/node:24.22.1-slim
-fi
+# Use the production recipe's builder, never a stale container from an older Node.
+node_image=$(awk '$1 == "FROM" && $4 == "ui" {print $2; exit}' Containerfile)
+test -n "${node_image}"
+nodebuilder=$(buildah from -v "${PWD}:/usr/src:Z" "${node_image}")
+trap 'buildah rm "${nodebuilder}" >/dev/null' EXIT
 
 echo "Build static UI files with node..."
 buildah run \
     --workingdir=/usr/src/ui \
     --env="NODE_OPTIONS=--openssl-legacy-provider" \
-    nodebuilder-idp \
-    sh -c "corepack enable && yarn install && yarn build"
+    "${nodebuilder}" \
+    sh ./build.sh
 
 # Build the Keycloak image, with the NS8 providers built in
 echo "Building the Keycloak image..."
