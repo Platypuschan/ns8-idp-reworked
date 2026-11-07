@@ -13,11 +13,15 @@ import org.keycloak.urls.UrlType;
 
 /** Target of the ns8 welcome theme, the page of the host root. With
  * exactly one enabled realm besides master, redirect to its account
- * console, where the users of the user domain log in. Otherwise
- * redirect to the Administration Console, like the default welcome
- * theme: a page listing the realms would publish the user domain names.
+ * console, where the users of the user domain log in. Otherwise show
+ * a neutral page: the Administration Console is reachable only from the
+ * node, and a page listing the realms would publish the user domain names.
  */
 public final class HomeRedirect implements RealmResourceProvider {
+    private static final String NEUTRAL_PAGE = "<!DOCTYPE html><html><head><meta charset=\"utf-8\">"
+        + "<title>Single sign-on</title></head><body id=\"ns8-home\">"
+        + "<p>Please sign in from the application you want to use.</p></body></html>";
+
     private final KeycloakSession session;
 
     HomeRedirect(KeycloakSession session) {
@@ -38,14 +42,14 @@ public final class HomeRedirect implements RealmResourceProvider {
             .filter(name -> !Config.getAdminRealm().equals(name))
             .limit(2)
             .toList();
-        URI target = realms.size() == 1
-            ? session.getContext().getUri(UrlType.FRONTEND).getBaseUriBuilder()
-                .path("realms/{realm}/account/").build(realms.get(0))
-            : session.getContext().getUri(UrlType.ADMIN).getBaseUriBuilder()
-                .path("/admin/").build();
         var noCache = new CacheControl();
         noCache.setNoCache(true);
         noCache.setNoStore(true);
+        if (realms.size() != 1) {
+            return Response.ok(NEUTRAL_PAGE, "text/html; charset=utf-8").cacheControl(noCache).build();
+        }
+        URI target = session.getContext().getUri(UrlType.FRONTEND).getBaseUriBuilder()
+            .path("realms/{realm}/account/").build(realms.get(0));
         return Response.status(Response.Status.FOUND).location(target).cacheControl(noCache).build();
     }
 

@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+import json
+import sys
+import idpcert
+import idprealm
+import kcadmin
+from idp_routes import certificate_transport
+
+request = json.load(sys.stdin)
+idprealm.require_keycloak()
+with idprealm.realms_lock():
+    kc = kcadmin.agent_client()
+    domain = request['domain']
+    realms = kcadmin.managed_realms(kc)
+    if domain not in realms:
+        idprealm.fail_validation('domain', domain, 'realm_not_found')
+    try:
+        operation = request['operation']
+        if operation == 'enroll':
+            idpcert.enroll(kc, domain, request['username'], request['label'], request['certificate'])
+        elif operation == 'revoke':
+            idpcert.revoke(kc, domain, request['fingerprint'])
+        elif operation == 'enable':
+            # Transport must work before the realm accepts certificates.
+            already_active = any(idpcert.enabled(kc.get('/' + idpcert.path(r))) for r in realms)
+            certificate_transport(True)
+            try:
+                idpcert.set_enabled(kc, domain, True, idpcert.proxy_secret())
+            except Exception:
+                if not already_active:
+                    certificate_transport(False)
+                raise
+        elif operation == 'disable':
+            # Remove trust first. Other realms may still need the transport.
+            idpcert.set_enabled(kc, domain, False)
+            if not any(idpcert.enabled(kc.get('/' + idpcert.path(r))) for r in realms):
+                certificate_transport(False)
+        else:
+            raise idpcert.CertificateError('invalid_operation')
+    except idpcert.CertificateError as exc:
+        idprealm.fail_validation('operation', request['operation'], str(exc))
+json.dump({}, sys.stdout)

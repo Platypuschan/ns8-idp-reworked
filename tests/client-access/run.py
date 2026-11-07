@@ -127,7 +127,9 @@ class LoginTests(unittest.TestCase):
         cls.samba = 'vw-ad-' + cls.suffix
         cls.keycloak = 'vw-kc-' + cls.suffix
         cls.names = []
-        cls.password = secrets.token_urlsafe(24) + 'Aa1!'
+        # samba-tool parses a positional password beginning with '-' as an
+        # option. Keep random credentials but always start with a safe prefix.
+        cls.password = 'Aa1!' + secrets.token_urlsafe(24)
         cls.kc_port, cls.vw_port = port(), port()
         cls.url = f'http://127.0.0.1:{cls.kc_port}'
         cls.vw_url = f'http://127.0.0.1:{cls.vw_port}'
@@ -142,8 +144,9 @@ class LoginTests(unittest.TestCase):
         cmd('podman', 'run', '-d', '--name', cls.keycloak, '--network', cls.network,
             '-p', f'127.0.0.1:{cls.kc_port}:8080', '--env', 'KC_BOOTSTRAP_ADMIN_USERNAME',
             '--env', 'KC_BOOTSTRAP_ADMIN_PASSWORD', os.environ.get('IDP_RUNTIME_IMAGE', 'localhost/ns8-idp-client-access-test'),
-            'start-dev', '--db=dev-file', '--features=scripts', '--hostname=' + cls.url,
+            'start-dev', '--db=dev-file', '--features=scripts', '--log-level=INFO,org.nethserver.keycloak.access:DEBUG', '--hostname=' + getattr(cls, 'frontend_url', cls.url),
             '--spi-theme--welcome-theme=ns8',
+            *getattr(cls, 'keycloak_args', []),
             env=env)
         cls.names.append(cls.keycloak)
         wait_http(cls.url + '/realms/master/.well-known/openid-configuration', cls.names)
@@ -173,7 +176,7 @@ class LoginTests(unittest.TestCase):
                 'group.name.ldap.attribute':'cn', 'groups.dn':'DC=ad,DC=test',
                 'group.object.classes':'group', 'preserve.group.inheritance':'false',
                 'membership.ldap.attribute':'member', 'membership.attribute.type':'DN',
-                'membership.user.ldap.attribute':'cn', 'mode':'READ_ONLY',
+                'membership.user.ldap.attribute':'cn', 'mode':'LDAP_ONLY',
                 'user.roles.retrieve.strategy':'LOAD_GROUPS_BY_MEMBER_ATTRIBUTE',
                 'drop.non.existing.groups.during.sync':'false'
             }.items()}})
@@ -658,7 +661,7 @@ class LoginTests(unittest.TestCase):
 
     def test_34_host_root(self):
         """The host root leads to the account console of the only enabled
-        user domain realm, otherwise to the Administration Console."""
+        user domain realm, otherwise to a neutral page."""
         home=self.url+'/realms/master/ns8-home'
         page=requests.get(self.url+'/',timeout=20)
         self.assertEqual(page.status_code,200,page.text[-500:])
@@ -675,8 +678,14 @@ class LoginTests(unittest.TestCase):
         self.assertIn('/realms/ad.test/',login.url)
         self.kc.post('',{'realm':'second.test','enabled':True})
         try:
-            # Two realms: no page names the user domains
-            self.assertEqual(target(),self.url+'/admin/')
+            # Two realms: a neutral page names no user domain, and the
+            # Administration Console stays reachable only from the node
+            neutral=requests.get(home,allow_redirects=False,timeout=20)
+            self.assertEqual(neutral.status_code,200,neutral.text[-500:])
+            self.assertIn('no-store',neutral.headers.get('Cache-Control',''))
+            self.assertIn('id="ns8-home"',neutral.text)
+            self.assertNotIn('ad.test',neutral.text)
+            self.assertNotIn('second.test',neutral.text)
             realm=self.kc.get('/second.test')
             realm['enabled']=False
             self.kc.put('/second.test',realm)

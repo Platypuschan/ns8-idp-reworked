@@ -1,8 +1,8 @@
 # ns8-idp-reworked
 
-Veröffentlichte Vorabversion **0.1.0-rc.3**. Eigenständiges angepasstes Modul mit optionaler Client-Gruppenregel, einstellbar auf der Seite **Zugriff**, optionaler Tokenlaufzeit und Stamm-URL zur Kontoseite der Benutzerdomäne; keine externen Identitätsanbieter; kein Stable-/Katalogrelease.
+Veröffentlichte Vorabversion **0.1.0-rc.5**. Eigenständiges angepasstes Modul mit optionaler Client-Gruppenregel, einstellbar auf der Seite **Zugriff**, optionaler Tokenlaufzeit und optionaler [Anmeldung mit Gerätezertifikat](docs/CERTIFICATES.md); keine externen Identitätsanbieter; kein Stable-/Katalogrelease.
 
-[Prüfnachweise und Image-Digests](docs/RELEASE-0.1.0-rc.3.md) ([0.1.0-rc.2](docs/RELEASE-0.1.0-rc.2.md), [0.1.0-rc.1](docs/RELEASE-0.1.0-rc.1.md)) · [Release-Ablauf](docs/PRERELEASE.md) · [Gitea-SSO-Prüfung](docs/GITEA-SSO.md)
+[Prüfnachweise und Image-Digests](docs/RELEASE-0.1.0-rc.5.md) ([0.1.0-rc.3](docs/RELEASE-0.1.0-rc.3.md), [0.1.0-rc.2](docs/RELEASE-0.1.0-rc.2.md), [0.1.0-rc.1](docs/RELEASE-0.1.0-rc.1.md)) · [Release-Ablauf](docs/PRERELEASE.md) · [Gitea-SSO-Prüfung](docs/GITEA-SSO.md)
 
 Single sign-on for NethServer 8 applications, based on Keycloak
 
@@ -37,10 +37,11 @@ The host root, `https://sso.example.org/`, leads the users to the
 account console of their user domain,
 `https://sso.example.org/realms/<user domain>/account/`, where they
 log in with their domain account. This works when the module has exactly
-one enabled realm. With no realm, or more than one, the host root leads
-to the Keycloak Administration Console, as in upstream Keycloak: no
-public page lists the user domains. The account console of each realm is
-always reachable at its own URL.
+one enabled realm. With no realm, or more than one, the host root shows
+a neutral page that asks to sign in from the application: no public page
+lists the user domains, and the Administration Console is reachable only
+from the node. The account console of each realm is always reachable at
+its own URL.
 
 ## Register an application
 
@@ -136,8 +137,9 @@ still denied. Tokens already issued and application sessions keep their own
 expiry: an application can end them itself, like the Vaultwarden module
 does.
 
-Setting a policy never disables the client. The checks act only on clients
-with the policy attribute, so the required action and the token mapper are
+Setting a policy never disables the client. Clients registered with `access_required:true` also deny access when their
+policy is removed or differs from the pinned group. For optional clients,
+the checks act only on clients with the policy attribute, so the required action and the token mapper are
 put in place first, and one client update then sets the policy: a failure
 leaves the client as it was, unrestricted, or restricted already. Trying
 again completes it.
@@ -277,7 +279,7 @@ Console of the master realm, which has no users of the user domains. A
 theme template cannot read the realms, so the page forwards to the
 `ns8-home` realm resource (`/realms/master/ns8-home`, in the provider
 jar), which redirects to the account console of the only enabled realm
-besides master, or to the Administration Console.
+besides master, or shows the neutral page.
 
 ### Module configuration
 
@@ -393,6 +395,12 @@ takes effect immediately: the core has already reloaded the unit files.
 before it existed.
 
 ## Running tests locally
+
+Optional personal device certificate sign-in is documented in
+[CERTIFICATES.md](docs/CERTIFICATES.md). It includes an administrator-only
+enrollment/revocation page and requires the accompanying NS8 Traefik route API
+extension; the stock proxy cannot enable the feature. The existing password
+login and live LDAP group access policy remain available.
 
 This module uses the NS8 standard testing infrastructure. For instructions on how to run the test suite locally, refer to the [Running tests locally](https://github.com/NethServer/ns8-github-actions/blob/v1/README.md#running-tests-locally) section of the ns8-github-actions README.
 

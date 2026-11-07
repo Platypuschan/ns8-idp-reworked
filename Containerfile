@@ -1,4 +1,4 @@
-FROM docker.io/library/node:24.22.0-slim AS ui
+FROM docker.io/library/node:24.22.1-slim AS ui
 WORKDIR /src
 ENV NODE_OPTIONS=--openssl-legacy-provider
 COPY ui/ ./

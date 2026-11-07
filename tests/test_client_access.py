@@ -137,6 +137,7 @@ class FakeKeycloak:
         self.fail_put = False
         self.ldap_ok = True
         self.denied_users = set()
+        self.edit_mode = 'READ_ONLY'
     def get(self, path, params=None):
         if path.endswith('/unregistered-required-actions'):
             return []
@@ -144,8 +145,9 @@ class FakeKeycloak:
             return [dict(self.action)]
         if path.endswith('/components'):
             if params.get('type') == 'org.keycloak.storage.UserStorageProvider':
-                return [{'id':'ldap1','providerId':'ldap','config':{'connectionUrl':['ldap://x'],'bindDn':['cn=x']}}]
-            return [{'id':'m1','providerId':'group-ldap-mapper','config':{'mode':['READ_ONLY'],
+                return [{'id':'ldap1','providerId':'ldap','config':{'connectionUrl':['ldap://x'],'bindDn':['cn=x'],
+                    'editMode':[self.edit_mode]}}]
+            return [{'id':'m1','providerId':'group-ldap-mapper','config':{'mode':['LDAP_ONLY'],
                 'user.roles.retrieve.strategy':['LOAD_GROUPS_BY_MEMBER_ATTRIBUTE']}}]
         if '/group-by-path/' in path or '/groups/' in path:
             return {'id':'g1','name':'engineering','path':'/engineering'}
@@ -220,6 +222,15 @@ class PolicyTests(unittest.TestCase):
                 state = self.access.access_state(kc, 'ad.test', client)
                 self.assertFalse(state['enforced'])
                 self.assertEqual(state['issues'], [issue])
+
+    def test_writable_federation_is_refused(self):
+        # LDAP_ONLY would write Keycloak membership changes to LDAP
+        kc = FakeKeycloak()
+        kc.edit_mode = 'WRITABLE'
+        with self.assertRaises(self.access.PolicyError) as ctx:
+            self.access.set_policy(kc, 'ad.test', kc.get('/ad.test/clients/c1'), 'engineering')
+        self.assertEqual(ctx.exception.code, 'ldap_federation_not_found')
+        self.assertEqual(kc.client_puts, [])
 
     def test_saml_clients_are_refused(self):
         kc = FakeKeycloak()

@@ -97,6 +97,18 @@
             ],
             "minimum": 60,
             "maximum": 86400
+        },
+        "access_required": {
+            "type": "boolean",
+            "description": "Require a client access group even if its policy is removed. Once enabled, registration never clears this requirement.",
+            "default": false
+        },
+        "expected_access_group": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^/\\r\\n]+$",
+            "description": "The consuming module expects this LDAP group. Resolve and pin its stable group ID independently of later administrator policy edits. Requires access_required=true."
         }
     }
 }

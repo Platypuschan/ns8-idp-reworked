@@ -9,7 +9,7 @@
 #
 
 # Build the provider jars
-FROM docker.io/library/maven:3.9.16-eclipse-temurin-21 AS providers
+FROM docker.io/library/maven:3.10.0-eclipse-temurin-21 AS providers
 WORKDIR /usr/src
 COPY ns8-authenticators ns8-authenticators
 COPY ns8-mappers ns8-mappers
@@ -21,8 +21,9 @@ RUN --mount=type=cache,target=/root/.m2 \
 
 # Build the Quarkus configuration with the build-time options and the
 # providers. Runtime options are passed by the systemd units.
-FROM quay.io/keycloak/keycloak:26.7.4-0 AS builder
+FROM quay.io/keycloak/keycloak:26.8.1-0 AS builder
 ENV KC_DB=postgres \
+    KC_SPI_X509CERT_LOOKUP__PROVIDER=traefik \
     KC_FEATURES=scripts \
     KC_HEALTH_ENABLED=true \
     KC_CACHE=local
@@ -31,7 +32,7 @@ RUN /opt/keycloak/bin/kc.sh build
 
 # The upstream image is already minimal (UBI micro) and runs as the
 # non-root keycloak user
-FROM quay.io/keycloak/keycloak:26.7.4-0
+FROM quay.io/keycloak/keycloak:26.8.1-0
 # Copy only what kc.sh build changes, to keep the base layers shared
 COPY --from=builder /opt/keycloak/lib/quarkus/ /opt/keycloak/lib/quarkus/
 COPY --from=builder /opt/keycloak/providers/ /opt/keycloak/providers/

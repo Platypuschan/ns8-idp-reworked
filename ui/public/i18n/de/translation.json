@@ -88,6 +88,8 @@
         "title": "Über"
     },
     "action": {
+        "alter-certificates": "Zertifikate verwalten",
+        "get-certificates": "Zertifikate lesen",
         "list-backup-repositories": "Backup-Speicherorte auflisten",
         "get-module-info": "Modul-Info abrufen",
         "list-installed-modules": "Installierte Module auflisten",
@@ -103,5 +105,42 @@
     },
     "task": {
         "cannot_create_task": "Aufgabe {action} kann nicht erstellt werden"
+    },
+    "certificates": {
+        "confirm_enable": "Zertifikatsanmeldung aktivieren? Sie ersetzt den Passwort-/OTP-Formularzweig. Bei verpflichtender Mehrfaktoranmeldung zuerst den Anmeldeablauf prüfen. Die IdP-Adresse ist dabei einige Sekunden nicht erreichbar.",
+        "title": "Zertifikate",
+        "description": "Optionale Anmeldung ohne Passwort mit einem persönlichen Gerätezertifikat. Nur das öffentliche PEM-Zertifikat registrieren; der private Schlüssel bleibt auf dem Gerät. Benötigt die Clientzertifikats-Erweiterung für NS8-Traefik. Bestehende App-Zugriffsgruppen gelten weiterhin.",
+        "no_realms": "Zuerst einen Realm für eine Benutzerdomäne erstellen.",
+        "enabled": "Zertifikatsanmeldung aktiviert",
+        "disabled": "Zertifikatsanmeldung deaktiviert",
+        "enable": "Zertifikatsanmeldung aktivieren",
+        "disable": "Zertifikatsanmeldung deaktivieren",
+        "revoke_notice": "Ein Widerruf beendet auch alle IdP-Sitzungen dieses Benutzers. Bestehende Anwendungssitzungen und Offline-Daten haben eine eigene Lebensdauer.",
+        "expires": "Gültig bis:",
+        "revoke": "Widerrufen",
+        "username": "Domänenbenutzername",
+        "label": "Gerätename",
+        "public_certificate": "Öffentliches Clientzertifikat (.crt oder .pem)",
+        "enroll": "Zertifikat registrieren",
+        "confirm_revoke": "{label} widerrufen und alle IdP-Sitzungen dieses Benutzers beenden?",
+        "error_invalid_certificate": "Ein einzelnes öffentliches PEM-Zertifikat ohne privaten Schlüssel auswählen.",
+        "error_invalid_client_certificate": "Ein gültiges Zertifikat zur Clientauthentifizierung ist erforderlich.",
+        "error_certificate_not_current": "Zertifikat abgelaufen oder noch nicht gültig.",
+        "error_domain_user_not_found": "Kein aktiver Domänenbenutzer gefunden.",
+        "error_ldap_identity_missing": "Die LDAP-Identität konnte nicht geprüft werden.",
+        "error_certificate_already_registered": "Zertifikat bereits registriert.",
+        "error_certificate_limit": "Maximal 128 Zertifikate pro Realm erreicht.",
+        "error_certificate_not_found": "Zertifikat nicht gefunden.",
+        "error_custom_browser_flow": "Der angepasste Browser-Anmeldeablauf muss zuerst geprüft werden.",
+        "error_traefik_certificate_support_required": "Vor dem Aktivieren die Clientzertifikats-Erweiterung für NS8-Traefik installieren.",
+        "error_realm_not_found": "Realm nicht gefunden.",
+        "not_operational": "Aktiviert, aber derzeit nicht wirksam: Der Proxy meldet keine Clientzertifikate oder der Anmeldeablauf wurde geändert. Die Anmeldung mit Passwort funktioniert weiterhin.",
+        "revocation_pending": "Widerruf nicht abgeschlossen, Anmeldung gesperrt; Widerruf erneut ausführen",
+        "expired": "abgelaufen",
+        "expires_soon": "läuft bald ab",
+        "error_invalid_proxy_secret": "Der interne Proxy-Nachweis des Moduls ist ungültig.",
+        "error_invalid_operation": "Ungültiger Vorgang.",
+        "error_traefik_route_failed": "Die Proxy-Routen konnten nicht geändert werden; die bisherigen Routen wurden wiederhergestellt.",
+        "error_idp_route_missing": "Die IdP-Route ist nicht lesbar. Modul neu konfigurieren und erneut versuchen."
     }
 }

@@ -1,0 +1,90 @@
+--- a/imageroot/actions/set-route/20writeconfig
++++ b/imageroot/actions/set-route/20writeconfig
+@@ -150,6 +150,22 @@
+     router_http["middlewares"].append(f'{data["instance"]}-headers')
+     router_https["middlewares"].append(f'{data["instance"]}-headers')
+ 
++# Optional proof of TLS client key possession. Authorization remains the
++# backend's responsibility: RequestClientCert accepts self-signed certificates.
++# Every HTTPS router of a hostname MUST select the same options (TLS uses SNI,
++# not the HTTP path). One shared, identical option avoids per-path conflicts.
++# Strip inbound headers AFTER user-configured middleware, then set from TLS.
++if data.get('client_certificates'):
++    if not data.get('host') or not data.get('http2https'):
++        raise ValueError('client_certificates requires a host and HTTPS redirection')
++    router_https['tls']['options'] = 'ns8-client-certificates@file'
++    clear_name = f'{data["instance"]}-client-cert-clear'
++    pass_name = f'{data["instance"]}-client-cert-pass'
++    middlewares[clear_name] = {'headers': {'customRequestHeaders': {
++        'X-Forwarded-Tls-Client-Cert': '', 'X-Forwarded-Tls-Client-Cert-Info': ''}}}
++    middlewares[pass_name] = {'passTLSClientCert': {'pem': True}}
++    router_https['middlewares'].extend([clear_name, pass_name])
++
+ # Enable or disable HTTP 2 HTTPS redirection
+ if data.get("http2https"):
+     router_http["middlewares"] = ["http2https-redirectscheme"]
+@@ -169,6 +185,10 @@
+ if 'skip_cert_verify' in data and data["skip_cert_verify"]:
+     config["http"]["serversTransports"] =  serversTransports
+ 
++if data.get('client_certificates'):
++    config['tls'] = {'options': {'ns8-client-certificates': {
++        'minVersion': 'VersionTLS12', 'clientAuth': {'clientAuthType': 'RequestClientCert'}}}}
++
+ if middlewares:
+     config["http"]["middlewares"] = middlewares
+ 
+--- a/imageroot/pypkg/get_route.py
++++ b/imageroot/pypkg/get_route.py
+@@ -64,6 +64,8 @@
+         # Check if the certificate is retrieved automatically
+         route['lets_encrypt'] = True if traefik_https_route['tls'].get("certResolver") else False
+ 
++        route['client_certificates'] = traefik_https_route['tls'].get('options') == 'ns8-client-certificates@file'
++
+         # Strip @file suffix from middleware names
+         for mid in traefik_http_route.get("middlewares",[]) + traefik_https_route.get("middlewares",[]):
+             middlewares.append(mid[0:mid.index('@')])
+--- a/imageroot/actions/set-route/validate-input.json
++++ b/imageroot/actions/set-route/validate-input.json
+@@ -244,6 +244,10 @@
+                     }
+                 }
+             }
++        },
++        "client_certificates": {
++            "type": "boolean",
++            "description": "Request TLS client certificates and forward the PEM after removing inbound certificate headers. The backend MUST authorize certificates independently. Requires host and http2https. All routes for the same hostname must use the same value."
+         }
+     }
+ }
+\ No newline at end of file
+--- a/imageroot/actions/get-route/validate-output.json
++++ b/imageroot/actions/get-route/validate-output.json
+@@ -202,6 +202,10 @@
+                     "description": "If insecureSkipVerify is true, the TLS connection to the authentication server accepts any certificate presented by the server regardless of the hostnames it covers"
+                 }
+             }
++        },
++        "client_certificates": {
++            "type": "boolean",
++            "description": "Request TLS client certificates and forward the PEM after removing inbound certificate headers. The backend MUST authorize certificates independently. Requires host and http2https. All routes for the same hostname must use the same value."
+         }
+     }
+ }
+\ No newline at end of file
+--- a/imageroot/actions/set-route/29waitsync
++++ b/imageroot/actions/set-route/29waitsync
+@@ -13,6 +13,12 @@
+ data = json.load(sys.stdin)
+ retry = 0
+ 
++# A hostname changes its TLS options in two tasks. Traefik drops its routers
++# between them, so waiting here only prolongs that window. The caller checks
++# the readback of both routes.
++if 'client_certificates' in data:
++    sys.exit(0)
++
+ while get_route(data).get('instance') != data['instance'] and retry <= 10:
+     retry += 1
+     time.sleep(1)

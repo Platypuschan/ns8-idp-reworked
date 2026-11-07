@@ -21,6 +21,7 @@ import unittest
 sys.dont_write_bytecode = True
 
 ROOT=Path(__file__).resolve().parents[1]
+sys.path.append(str(ROOT/'imageroot/pypkg'))
 UPSTREAM=Path(os.environ.get('IDP_UPSTREAM_ROOT', ROOT))
 
 
@@ -41,10 +42,11 @@ def action_worker(script, lockfile, pipe):
     ldap.Ldapproxy=lambda:types.SimpleNamespace(get_domains_list=lambda:['ad.test'])
     kcadmin=types.ModuleType('kcadmin')
     client={'id':'client','clientId':'review1','attributes':{'ns8.module_id':'review1'}}
-    kc=types.SimpleNamespace(put=lambda *a:None)
+    kc=types.SimpleNamespace(put=lambda *a:None, get=lambda *a:{'attributes':{}})
     def connect():
         pipe.send('keycloak-access')
         return kc
+    kcadmin.wait_ready=lambda:None
     kcadmin.agent_client=connect
     kcadmin.managed_realms=lambda kc:['ad.test']
     sys.modules.update({'agent':agent,'agent.ldapproxy':ldap,'kcadmin':kcadmin})

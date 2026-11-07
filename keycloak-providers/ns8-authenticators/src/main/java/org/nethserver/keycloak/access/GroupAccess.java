@@ -1,5 +1,6 @@
 package org.nethserver.keycloak.access;
 
+import org.jboss.logging.Logger;
 import org.keycloak.models.ClientModel;
 import org.keycloak.component.ComponentModel;
 import org.keycloak.models.KeycloakSession;
@@ -18,10 +19,13 @@ public final class GroupAccess {
     public static final String GROUP_ID = "ns8.access_group_id";
     public static final String GROUP_PATH = "ns8.access_group_path";
 
+    private static final Logger LOG = Logger.getLogger(GroupAccess.class);
+
     private GroupAccess() { }
 
     public static boolean restricted(ClientModel client) {
-        return client == null || POLICY_GROUP.equals(client.getAttribute(POLICY));
+        return client == null || POLICY_GROUP.equals(client.getAttribute(POLICY))
+            || "true".equals(client.getAttribute("ns8.access_required"));
     }
 
     public static boolean allowed(KeycloakSession session, RealmModel realm, ClientModel client, UserModel user) {
@@ -29,7 +33,21 @@ public final class GroupAccess {
             return true;
         }
         try {
+            if (client == null || !POLICY_GROUP.equals(client.getAttribute(POLICY))) {
+                return false;
+            }
             var groupId = client.getAttribute(GROUP_ID);
+            if ("true".equals(client.getAttribute("ns8.access_required"))
+                    && (groupId == null || !groupId.equals(client.getAttribute("ns8.access_expected_group_id")))) {
+                return false;
+            }
+            // One decision per request, shared by required action and token mappers.
+            var key = GroupAccess.class.getName() + ":" + realm.getId() + ":" + client.getId()
+                + ":" + (user == null ? "" : user.getId()) + ":" + groupId;
+            var decision = session.getAttribute(key);
+            if (decision instanceof Boolean) {
+                return (Boolean) decision;
+            }
             var group = groupId == null || groupId.isEmpty() ? null : realm.getGroupById(groupId);
             if (group == null || user == null) {
                 return false;
@@ -37,6 +55,7 @@ public final class GroupAccess {
             // The user cache keeps the group memberships of LDAP users for
             // its whole lifespan: evict this user only, and load it again
             // through the LDAP federation to read its current memberships.
+            LOG.debug("NS8 membership lookup");
             var cache = session.getProvider(UserCache.class);
             if (cache != null) {
                 cache.evict(realm, user);
@@ -46,23 +65,29 @@ public final class GroupAccess {
                     || !liveMembership(realm, live)) {
                 return false;
             }
-            return live.getGroupsStream().anyMatch(g -> g.getId().equals(groupId));
+            boolean allowed = live.getGroupsStream().anyMatch(g -> g.getId().equals(groupId));
+            session.setAttribute(key, allowed);
+            return allowed;
         } catch (RuntimeException ex) {
             // LDAP errors must not fall back to local memberships
             return false;
         }
     }
 
-    /** The memberships come from LDAP only if the user is federated by an
-     * LDAP provider with a read-only group mapper. */
+    /** The memberships come from LDAP only if the user is federated by a
+     * read-only LDAP provider whose group mapper reads them from LDAP only.
+     * LDAP_ONLY writes memberships to LDAP when the federation is writable. */
     private static boolean liveMembership(RealmModel realm, UserModel user) {
         var link = user.getFederationLink();
         ComponentModel federation = link == null ? null : realm.getComponent(link);
         return federation != null && "ldap".equals(federation.getProviderId())
+            && "READ_ONLY".equals(federation.getConfig().getFirst("editMode"))
             && realm.getComponentsStream(federation.getId(),
                 "org.keycloak.storage.ldap.mappers.LDAPStorageMapper")
                 .anyMatch(m -> "group-ldap-mapper".equals(m.getProviderId())
-                    && "READ_ONLY".equals(m.getConfig().getFirst("mode"))
+                    && "LDAP_ONLY".equals(m.getConfig().getFirst("mode"))
+                    && (m.getConfig().getFirst("groups.path") == null
+                        || "/".equals(m.getConfig().getFirst("groups.path")))
                     && "LOAD_GROUPS_BY_MEMBER_ATTRIBUTE".equals(
                         m.getConfig().getFirst("user.roles.retrieve.strategy")));
     }

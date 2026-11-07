@@ -1,14 +1,21 @@
 name: Prepare prerelease
 on:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the new RC after all tests pass (main only)
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
-  group: prerelease
+  # Publication stays serialized; isolated SHA-tagged test candidates may run
+  # concurrently without overwriting each other's images or release tags.
+  group: ${{ inputs.publish && 'prerelease' || format('prerelease-test-{0}', github.sha) }}
   cancel-in-progress: false
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 90
     permissions:
       contents: read
@@ -19,7 +26,7 @@ jobs:
       candidate: ${{ steps.images.outputs.candidate }}
       version: ${{ steps.images.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: pip install requests jsonschema
       - run: python3 -m unittest discover -s tests -p 'test_*.py' -v
       - run: sudo apt-get update && sudo apt-get install -y podman skopeo
@@ -46,27 +53,36 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        distro: [debian13, rocky9]
+        include:
+          - distro: debian13
+            bootstrap: false
+          - distro: rocky9
+            bootstrap: true
     permissions:
       contents: read
       statuses: write
     uses: NethServer/ns8-github-actions/.github/workflows/test-on-qemu.yml@v1
     with:
       distro: ${{ matrix.distro }}
-      image_url: ${{ needs.build.outputs.image }}
+      # CI-only signed official Rocky repositories while the NS mirror
+      # advertises missing BaseOS metadata; no installed module OS changes.
+      image_url: ${{ !matrix.bootstrap && needs.build.outputs.image || '' }}
+      setup_cluster: ${{ !matrix.bootstrap }}
+      coremodules: ${{ matrix.bootstrap && format('ghcr.io/nethserver/core:3.23.2 {0}', needs.build.outputs.image) || '' }}
       repo_ref: ${{ github.sha }}
       version_tag: ${{ needs.build.outputs.candidate }}
       install_args: ghcr.io/nethserver/core:3.23.2
-      script: ""
-      args: "-v SCENARIO:install"
+      script: ${{ matrix.bootstrap && 'tests/ns8/bootstrap-rocky.sh' || '' }}
+      args: ${{ matrix.bootstrap && needs.build.outputs.image || '-v SCENARIO:install -v CERTIFICATE_TRANSPORT_TEST:True' }}
   publish:
+    if: ${{ inputs.publish && github.ref == 'refs/heads/main' }}
     needs: [build, qemu]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y skopeo
       - name: Promote tested digests and create the prerelease
         env:

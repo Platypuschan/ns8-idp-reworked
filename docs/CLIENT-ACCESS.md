@@ -46,8 +46,8 @@ The required action relies on Keycloak's trigger evaluation at completed
 authentication, the LDAP failure check uses
 `StorageUnavailableUserModelDelegate` (not a stable public API), and the
 live user check uses the admin example-token endpoint. Revalidate these
-paths on Keycloak updates. The current compile target is inherited from
-upstream (26.7.5), while the runtime image is upstream's 26.7.4.
+paths on Keycloak updates. The security work branch uses 26.8.1 for both the provider compile target
+and runtime. See [ADR 0002](decisions/0002-security-decisions.md).
 
 Decisions: [ADR 0001](decisions/0001-client-access-hardening.md).
 

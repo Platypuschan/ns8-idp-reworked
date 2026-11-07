@@ -68,9 +68,11 @@ Create the user domain
 No realm before the first registration
     Realm is absent    ${USER_DOMAIN}
 
-The host root leads to the Administration Console without realms
+The host root shows a neutral page without realms
     ${location} =    Host root target
-    Should Be Equal    ${location}    https://${IDP_HOST}/admin/
+    Should Be Empty    ${location}
+    ${page} =    Execute Command    curl -sk --resolve ${IDP_HOST}:443:127.0.0.1 https://${IDP_HOST}/realms/master/ns8-home
+    Should Contain    ${page}    id="ns8-home"
 
 The client owner is required
     &{error} =    Run validation    module/${module_id}/register-client    {"domain": "${USER_DOMAIN}"}
@@ -180,6 +182,31 @@ Restrict a client to a group
     &{client} =    Client    ${USER_DOMAIN}    ${FAKE_APP}
     Should Be Equal    ${client.access_group}    ${NONE}
     [Teardown]    Run task    module/${ldap_module_id}/remove-group    {"group": "g2"}    decode_json=${FALSE}
+
+Certificate transport cannot silently enable with the stock proxy
+    &{state} =    Run task    module/${module_id}/get-certificates    {"domain": "${USER_DOMAIN}"}
+    Should Not Be True    ${state.enabled}
+    Should Be Empty    ${state.certificates}
+    &{error} =    Run validation    module/${module_id}/alter-certificates    {"domain": "${USER_DOMAIN}", "operation": "enable"}
+    Should Be Equal    ${error.error}    traefik_certificate_support_required
+    &{state} =    Run task    module/${module_id}/get-certificates    {"domain": "${USER_DOMAIN}"}
+    Should Not Be True    ${state.enabled}
+    ${status} =    Login page status    ${USER_DOMAIN}    ${FAKE_APP}    ${REDIRECT_URI}
+    Should Be Equal    ${status}    200
+
+Enroll and revoke a public device certificate
+    ${certificate}    ${rc} =    Execute Command    umask 077 && openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/idp-x509-test.key -out /tmp/idp-x509-test.crt -days 2 -subj '/CN=ns8-test' -addext 'basicConstraints=critical,CA:FALSE' -addext 'keyUsage=critical,digitalSignature' -addext 'extendedKeyUsage=clientAuth' 2>/dev/null && cat /tmp/idp-x509-test.crt
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    ${request} =    Evaluate    json.dumps(dict(domain=$USER_DOMAIN, operation='enroll', username='u1', label='NS8 test', certificate=$certificate))    modules=json
+    Run task    module/${module_id}/alter-certificates    ${request}    decode_json=${FALSE}
+    &{state} =    Run task    module/${module_id}/get-certificates    {"domain": "${USER_DOMAIN}"}
+    Length Should Be    ${state.certificates}    1
+    ${fingerprint} =    Set Variable    ${state.certificates[0]['fingerprint']}
+    Should Be Equal    ${state.certificates[0]['username']}    u1
+    Run task    module/${module_id}/alter-certificates    {"domain": "${USER_DOMAIN}", "operation": "revoke", "fingerprint": "${fingerprint}"}    decode_json=${FALSE}
+    &{state} =    Run task    module/${module_id}/get-certificates    {"domain": "${USER_DOMAIN}"}
+    Should Be Empty    ${state.certificates}
 
 Disable and enable the realm
     Run task    module/${module_id}/alter-realm    {"domain": "${USER_DOMAIN}", "enabled": false}    decode_json=${FALSE}

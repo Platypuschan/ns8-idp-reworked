@@ -1,0 +1,11 @@
+{
+  "repository": "NethServer/ns8-traefik",
+  "commit": "21fa9f2e0b14ac84caed6fb4b68bb962d364a5b7",
+  "files": {
+    "imageroot/pypkg/get_route.py": "b31f7e68f1ffca5926cb8ba84a248dc10b53c36905986177387b9da325c91068",
+    "imageroot/actions/get-route/validate-output.json": "c57b4043c125be00c77b876393c90154a773ea1730aa4e6b3e2088d1247f1a26",
+    "imageroot/actions/set-route/validate-input.json": "bebfa21a880d7ffdda58d2e48f8e43ca509f906e04beed46863e0a7d2f3550f5",
+    "imageroot/actions/set-route/20writeconfig": "43637567bb807c35bbb4a49997453373894d92f5c91ff088f7bfcc4d4a4134bf",
+    "imageroot/actions/set-route/29waitsync": "5472f9fbda604528331e9fa14c272a329404ae67b0ab4d62ba53792f03593a33"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "type": "object",
+  "required": [
+    "enabled",
+    "operational",
+    "certificates"
+  ],
+  "properties": {
+    "enabled": {
+      "type": "boolean"
+    },
+    "operational": {
+      "type": "boolean",
+      "description": "Sign-in works now: the realm flow is bound and the proxy reports the capability"
+    },
+    "certificates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "fingerprint",
+          "user_id",
+          "ldap_id",
+          "username",
+          "label",
+          "not_after"
+        ]
+      }
+    }
+  }
+}

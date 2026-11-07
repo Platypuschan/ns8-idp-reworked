@@ -36,6 +36,9 @@ POLICY = "ns8.access_policy"
 POLICY_GROUP = "group"
 GROUP_ID = "ns8.access_group_id"
 GROUP_PATH = "ns8.access_group_path"
+REQUIRED = "ns8.access_required"
+EXPECTED_GROUP = "ns8.access_expected_group_id"
+EXPECTED_SOURCE = "ns8.access_group_binding"
 
 ACTION = "ns8-client-access"
 ACTION_NAME = "NS8 client access group"
@@ -100,16 +103,18 @@ def required_action_enabled(kc, realm):
 #
 
 def group_mapper(kc, realm):
-    """Return (storage, mapper): the LDAP federation and its group
-    mapper, if it reads the memberships from LDAP only. Otherwise raise
-    PolicyError."""
+    """Return (storage, mapper): the read-only LDAP federation and its
+    group mapper, if it reads the memberships from LDAP only. Otherwise
+    raise PolicyError. LDAP_ONLY would write memberships to a writable
+    federation."""
     storages = [c for c in kc.get(f"/{realm}/components", params={"type": STORAGE_TYPE})
-        if c.get("providerId") == "ldap"]
+        if c.get("providerId") == "ldap" and c.get("config", {}).get("editMode") == ["READ_ONLY"]]
     if len(storages) != 1:
         raise PolicyError("ldap_federation_not_found")
     mappers = [m for m in kc.get(f"/{realm}/components", params={"parent": storages[0]["id"], "type": GROUP_MAPPER_TYPE})
         if m.get("providerId") == "group-ldap-mapper"
-        and m.get("config", {}).get("mode") == ["READ_ONLY"]
+        and m.get("config", {}).get("mode") == ["LDAP_ONLY"]
+        and m.get("config", {}).get("groups.path", ["/"]) == ["/"]
         and m.get("config", {}).get("user.roles.retrieve.strategy") == ["LOAD_GROUPS_BY_MEMBER_ATTRIBUTE"]]
     if len(mappers) != 1:
         raise PolicyError("ldap_group_mapper_not_found")
@@ -152,9 +157,11 @@ def access_state(kc, realm, client):
     It does not query LDAP: see live_state()."""
     attributes = client.get("attributes") or {}
     if not restricted(client):
-        return {"enforced": False, "group": None, "group_path": None, "issues": []}
+        return {"enforced": False, "group": None, "group_path": None, "issues": ["required_policy_missing"] if attributes.get(REQUIRED) == "true" else []}
     state = {"enforced": False, "group": None, "group_path": attributes.get(GROUP_PATH) or None, "issues": []}
     issues = state["issues"]
+    if attributes.get(REQUIRED) == "true" and attributes.get(EXPECTED_GROUP) != attributes.get(GROUP_ID):
+        issues.append("expected_group_mismatch")
     try:
         group = kc.get(f"/{realm}/groups/{_path(attributes.get(GROUP_ID) or '-')}")
         state["group"] = group["name"]
@@ -205,6 +212,8 @@ def set_policy(kc, realm, client, group):
         GROUP_ID: group_rep["id"],
         GROUP_PATH: group_rep["path"],
     })
+    if not client["attributes"].get(EXPECTED_GROUP) or client["attributes"].get(REQUIRED) != "true":
+        client["attributes"][EXPECTED_GROUP] = group_rep["id"]
     client["attributes"].update({attribute: "false" for attribute in GRANT_ATTRIBUTES})
     client.update({flag: False for flag in GRANT_FLAGS})
     kc.put(f"/{realm}/clients/{client['id']}", client)
@@ -317,11 +326,16 @@ def clear_policy(kc, realm, client):
     The required action stays registered: it does not restrict clients
     without a policy."""
     attributes = client.setdefault("attributes", {})
-    for name in (POLICY, GROUP_ID, GROUP_PATH):
+    names = (POLICY, GROUP_ID, GROUP_PATH)
+    if attributes.get(REQUIRED) != "true":
+        names += (EXPECTED_GROUP, EXPECTED_SOURCE)
+    for name in names:
         if name in attributes:
             # An empty value removes the attribute
             attributes[name] = ""
     kc.put(f"/{realm}/clients/{client['id']}", client)
+    if attributes.get(REQUIRED) == "true":
+        return
     for mapper in _token_gates(kc, realm, client):
         kc.delete(f"/{realm}/clients/{client['id']}/protocol-mappers/models/{mapper['id']}")
 
@@ -333,7 +347,7 @@ def reconcile(kc, realm, clients):
     """Restore required actions and token gates without re-enabling clients."""
     if not action_installed(kc, realm):
         return
-    restricted_clients = [c for c in clients if restricted(c)]
+    restricted_clients = [c for c in clients if restricted(c) or (c.get("attributes") or {}).get(REQUIRED) == "true"]
     if restricted_clients:
         ensure_required_action(kc, realm)
     for client in restricted_clients:

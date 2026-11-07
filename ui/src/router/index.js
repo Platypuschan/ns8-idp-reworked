@@ -7,10 +7,12 @@ import VueRouter from "vue-router";
 import Status from "../views/Status.vue";
 import Settings from "../views/Settings.vue";
 import Access from "../views/Access.vue";
+import Certificates from "../views/Certificates.vue";
 
 Vue.use(VueRouter);
 
 const routes = [
+  { path: "/certificates", name: "Certificates", component: Certificates },
   {
     path: "/",
     name: "Status",

@@ -14,7 +14,9 @@ Environment=PODMAN_SYSTEMD_UNIT=%n
 EnvironmentFile=%E/state/environment
 WorkingDirectory=%E/state
 Restart=always
-TimeoutStartSec=180
+# The start covers the health check (150s), keycloak-post-start waiting
+# for the model bootstrap (wait_ready, 300s) and its reconciliation
+TimeoutStartSec=600
 ExecStartPre=/bin/rm -f %t/keycloak.ctr-id
 # The unit is active when the health check reports Keycloak as ready.
 # The probe script of the image waits until Keycloak is ready in the

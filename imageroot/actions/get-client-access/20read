@@ -45,6 +45,10 @@ if client is None:
 
 state = idpaccess.access_state(kc, domain, client)
 state["enabled"] = client.get("enabled", True)
+attributes = client.get("attributes") or {}
+state["policy_consumer_bound"] = attributes.get("ns8.access_group_binding") == "consumer"
+state["policy_required"] = attributes.get("ns8.access_required") == "true"
+state["policy_group_pinned"] = bool(attributes.get("ns8.access_group_id")) and attributes.get("ns8.access_group_id") == attributes.get("ns8.access_expected_group_id")
 
 if request.get("live"):
     def group_exists(name):
