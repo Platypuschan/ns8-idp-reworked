@@ -23,6 +23,11 @@ Certificate authorization
     Should Be Equal    ${result.code}    ${expected}
     RETURN    ${result}
 
+Password login is available
+    &{state} =    Certificate authorization    none    ${FALSE}
+    Should Be Equal As Integers    ${state.status}    200
+    Should Be True    ${state.password_form}
+
 *** Test Cases ***
 Install the reviewed proxy capability only in the disposable guest
     ${result} =    Run Process    bash    -c    command -v patch >/dev/null || (apt-get update -qq && apt-get install -y -qq patch)
@@ -95,7 +100,8 @@ Revoke and disable certificate login
     &{state} =    Run task    module/${module_id}/get-certificates    {"domain": "${USER_DOMAIN}"}
     Should Not Be True    ${state.enabled}
     Should Be Empty    ${state.certificates}
-    &{state} =    Certificate authorization    none    ${FALSE}
-    Should Be True    ${state.password_form}
+    # Disabling changes both routers' TLS options; Traefik reload is asynchronous.
+    # Retry positive readiness only, never the revoked-certificate denial above.
+    Retry test    Password login is available
     Run task    module/${module_id}/remove-realm    {"domain": "${USER_DOMAIN}", "force": true}    decode_json=${FALSE}
     Execute Command    redis-cli --no-auth-warning hdel cluster/module_domains ${CERTIFICATE_APP}
