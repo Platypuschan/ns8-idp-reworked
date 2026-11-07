@@ -10,7 +10,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.15'
       - run: pip install requests jsonschema cryptography pyyaml
       - run: python3 -m unittest discover -s tests -p 'test_*.py' -v
       - run: podman build -f tests/client-access/Samba.Containerfile -t localhost/ns8-vaultwarden-test-samba tests/client-access
