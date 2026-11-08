@@ -20,6 +20,8 @@ import agent
 
 AGENT_CLIENT_ID = "ns8-agent"
 AGENT_SECRET_FILE = "ns8-agent.json"
+# Keycloak 26.8.2 accepts admin API tokens only with this client scope
+ADMIN_API_SCOPE = "kc-admin-api"
 
 class KeycloakError(Exception):
     def __init__(self, method, url, status, body):
@@ -140,11 +142,33 @@ def agent_client():
         creds = json.load(fp)
     return Client(creds["client_id"], creds["client_secret"])
 
-def save_agent_secret(client_secret):
+def ensure_admin_api_scope(kc, client_uuid):
+    """Make kc-admin-api a default scope of a master realm client, so that
+    its tokens are accepted by the admin API. Return False if this
+    Keycloak version has no such scope (before 26.8.2: not needed).
+    Idempotent."""
+    scope = next((s for s in kc.get("/master/client-scopes") if s["name"] == ADMIN_API_SCOPE), None)
+    if scope is None:
+        return False
+    kc.put(f"/master/clients/{client_uuid}/default-client-scopes/{scope['id']}")
+    return True
+
+def agent_secret_current():
+    """True if ns8-agent.json was written with the admin API scope in
+    place. Older files make the init job run again: it also resets the
+    secret, which nothing else depends on."""
+    try:
+        with open(AGENT_SECRET_FILE) as fp:
+            return bool(json.load(fp).get("admin_api_scope"))
+    except (FileNotFoundError, ValueError):
+        return False
+
+def save_agent_secret(client_secret, admin_api_scope=False):
     old_umask = os.umask(0o077)
     try:
         with agent.safe_open(AGENT_SECRET_FILE) as fp:
-            json.dump({"client_id": AGENT_CLIENT_ID, "client_secret": client_secret}, fp)
+            json.dump({"client_id": AGENT_CLIENT_ID, "client_secret": client_secret,
+                       "admin_api_scope": admin_api_scope}, fp)
     finally:
         os.umask(old_umask)
 
