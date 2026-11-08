@@ -1,11 +1,90 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["local>NethServer/.github:ns8-automerge"],
+  "dependencyDashboard": true,
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**",
+    "prototype/**"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "PostgreSQL pin in the module image label of Containerfile; build-images.sh is handled by the NS8 preset",
+      "managerFilePatterns": ["/^Containerfile$/"],
+      "matchStrings": [
+        "docker\\.io/library/(?<depName>postgres):(?<currentValue>[-0-9a-zA-Z_.]+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "Yarn CLI in the developer image; must equal packageManager in ui/package.json (tests/test_ui_build.py)",
+      "managerFilePatterns": ["/^ui/Containerfile$/"],
+      "matchStrings": [
+        "@yarnpkg/cli-dist@(?<currentValue>\\d+\\.\\d+\\.\\d+)"
+      ],
+      "depNameTemplate": "@yarnpkg/cli-dist",
+      "datasourceTemplate": "npm"
+    }
+  ],
   "packageRules": [
+    {
+      "description": "Patch updates merge themselves after 7 days once the required checks pass; minor and major stay pull requests",
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "Runtime of the identity provider: never merge unattended, a human reads the PR",
+      "matchPackageNames": [
+        "quay.io/keycloak/keycloak",
+        "/^org\\.keycloak:/",
+        "postgres",
+        "docker.io/library/postgres",
+        "node",
+        "docker.io/library/node"
+      ],
+      "automerge": false
+    },
     {
       "description": "The providers must be built against the Keycloak version of the base image",
       "groupName": "Keycloak",
       "matchPackageNames": ["quay.io/keycloak/keycloak", "/^org\\.keycloak:/"]
+    },
+    {
+      "description": "Containerfile label and build-images.sh carry the same PostgreSQL pin",
+      "groupName": "PostgreSQL",
+      "matchPackageNames": ["postgres", "docker.io/library/postgres"]
+    },
+    {
+      "description": "Production UI builder and developer image use the same Node.js",
+      "groupName": "Node.js",
+      "matchPackageNames": ["node", "docker.io/library/node"]
+    },
+    {
+      "description": "packageManager and the developer image use the same Yarn",
+      "groupName": "Yarn",
+      "matchPackageNames": ["yarn", "@yarnpkg/cli-dist"]
+    },
+    {
+      "description": "Maven in providers build, client-access tests and Android helper move together",
+      "groupName": "Maven build image",
+      "matchPackageNames": ["maven", "docker.io/library/maven"]
+    },
+    {
+      "description": "Major runtime updates (Keycloak, PostgreSQL data format, Node.js) only on explicit approval in the Dependency Dashboard",
+      "matchUpdateTypes": ["major"],
+      "matchPackageNames": [
+        "quay.io/keycloak/keycloak",
+        "/^org\\.keycloak:/",
+        "postgres",
+        "docker.io/library/postgres",
+        "node",
+        "docker.io/library/node"
+      ],
+      "dependencyDashboardApproval": true
     }
   ]
 }
