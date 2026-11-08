@@ -30,7 +30,7 @@ signs in, so the test fails.
 
 [Final candidate 41201701011](https://github.com/Platypuschan/ns8-idp-reworked/actions/runs/41201701011)
 passed at the tested source above: build, Debian13 and Rocky9, **39 passed /
-one existing expected skip per distribution**. Core 3.23.2, Keycloak 26.8.1,
+one existing expected skip per distribution**. Core 3.23.2, Keycloak 26.8.2,
 actual NS8 Traefik runtime 3.7.15. Publication was explicitly disabled.
 
 The standard suite first verifies the unmodified stock proxy refuses certificate

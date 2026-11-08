@@ -1,9 +1,10 @@
-Sechste Vorabversion des angepassten Identity-Provider-Moduls für NethServer 8. Neu sind Betriebsrichtlinien auf der Seite **Einstellungen**.
+Erste stabile Version des angepassten Identity-Provider-Moduls für NethServer 8 (Keycloak 26.8.2).
 
-- Vier Schalter: Admin-Konsole nur vom Knoten, Gruppenmitgliedschaften nur aus dem Verzeichnis, Stamm-URL führt zur Kontoseite, strenge Anwendungsadressen. Alle sind standardmäßig an, bestehende Installationen ändern sich also nicht.
-- „Nur aus dem Verzeichnis" lässt sich nicht abschalten, solange Zugriffsregeln bestehen.
-- Die Zertifikatsanmeldung braucht jetzt das Modul `traefik-reworked` statt manuell eingespielter Dateien.
+- Keycloak-Laufzeit und Provider von 26.8.1 auf 26.8.2 angehoben: enthält die Sicherheitskorrekturen des Upstream-Releases 26.8.2 (u. a. Admin-API-Audience-Prüfung, Authentifizierungs-Race, id_token_hint-Logout).
+- Betriebsrichtlinien auf der Seite **Einstellungen** (Admin-Konsole nur vom Knoten, Gruppen nur aus dem Verzeichnis, Stamm-URL zur Kontoseite, strenge Anwendungsadressen), standardmäßig an.
+- Client-Gruppenregel, optionale Tokenlaufzeit und Anmeldung mit Gerätezertifikat (benötigt `traefik-reworked` 4.2.5-reworked.1 oder neuer).
+- Härtung: Das Einordnen der Zertifikats-Ausführung im Browser-Flow ist beschränkt und bricht mit Fehler ab, statt endlos zu laufen.
 
-Update-Reihenfolge: Zuerst `api-cli run cluster/update-module --data '{"module_url":"ghcr.io/platypuschan/traefik-reworked:4.2.5-reworked.1","instances":["traefik1"]}'`, aber nur wenn die Zertifikatsanmeldung genutzt werden soll. Danach das IdP-Modul.
+Update-Reihenfolge: Zuerst bei Nutzung der Zertifikatsanmeldung `traefik-reworked`, danach dieses Modul. Bestehende Realms, Clients und Tresordaten bleiben erhalten.
 
-Keine Stable- oder Katalogfreigabe; Vorabversion für Testinstallationen. Geprüft im NS8-Test (Debian 13, Rocky 9). Nicht abgedeckt sind `lets_encrypt=true` mit Zertifikatsanmeldung, das echte Update von rc.5, die vollständige Wiederherstellung, der komplette Bitwarden-Login und MFA.
+Nicht von der CI abgedeckt: `lets_encrypt=true` mit Zertifikatsanmeldung, vollständige Wiederherstellung, kompletter Bitwarden-Login mit MFA. Keine Katalogaufnahme.
