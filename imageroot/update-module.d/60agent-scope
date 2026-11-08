@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2026 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+# Keycloak 26.8.2 accepts admin API tokens only from clients with the
+# kc-admin-api scope. The ns8-agent client of an older installation lacks
+# it: remove its saved credentials, so that keycloak-init, which runs when
+# the file is missing, repairs the client when the services restart.
+
+import os
+import sys
+
+import kcadmin
+
+state = os.environ.get("AGENT_STATE_DIR")
+if state:
+    os.chdir(state)
+if os.path.exists(kcadmin.AGENT_SECRET_FILE) and not kcadmin.agent_secret_current():
+    print("Resetting ns8-agent: the admin API scope is missing", file=sys.stderr)
+    os.unlink(kcadmin.AGENT_SECRET_FILE)

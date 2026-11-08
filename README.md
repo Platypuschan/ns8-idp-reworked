@@ -353,7 +353,7 @@ same job covers the first start and credential recovery:
    checks the client credentials instead.
 2. A temporary Keycloak server starts in the pod.
 3. The temporary client creates `ns8-agent`, or resets its secret, and
-   grants it the `create-realm` role and the admin roles of the existing
+   grants it the `kc-admin-api` scope (required by Keycloak 26.8.2), the `create-realm` role and the admin roles of the existing
    realms, which a new client would not have.
 4. The job checks the new credentials, saves them, deletes the temporary
    clients and stops the temporary server.

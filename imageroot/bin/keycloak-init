@@ -86,6 +86,10 @@ def setup_agent_client(kc):
         rep["serviceAccountsEnabled"] = True
         kc.put(f"/master/clients/{rep['id']}", rep)
 
+    # Keycloak 26.8.2 rejects admin API tokens without the audience of
+    # this scope (CVE-2026-19688)
+    scope_set = kcadmin.ensure_admin_api_scope(kc, rep["id"])
+
     sa_user = kc.get(f"/master/clients/{rep['id']}/service-account-user")
     kc.post(f"/master/users/{sa_user['id']}/role-mappings/realm",
         [kc.get("/master/roles/create-realm")])
@@ -98,7 +102,7 @@ def setup_agent_client(kc):
         print(f"Granting admin roles of realm {realm}", file=sys.stderr)
         kc.post(f"/master/users/{sa_user['id']}/role-mappings/clients/{mgmt['id']}",
             kc.get(f"/master/clients/{mgmt['id']}/roles"))
-    return agent_secret
+    return agent_secret, scope_set
 
 def delete_temp_clients(kc):
     """Delete the temporary clients, including leftovers of interrupted
@@ -119,10 +123,11 @@ try:
     start_temp_server()
     kcadmin.wait_ready()
     kc = kcadmin.Client(temp_client_id, temp_client_secret)
-    agent_secret = setup_agent_client(kc)
-    # Check the new credentials before saving them
-    kcadmin.Client(kcadmin.AGENT_CLIENT_ID, agent_secret).token()
-    kcadmin.save_agent_secret(agent_secret)
+    agent_secret, scope_set = setup_agent_client(kc)
+    # Check the new credentials, including the admin API access, before
+    # saving them
+    kcadmin.managed_realms(kcadmin.Client(kcadmin.AGENT_CLIENT_ID, agent_secret))
+    kcadmin.save_agent_secret(agent_secret, scope_set)
     delete_temp_clients(kc)
 finally:
     stop_temp_server()
