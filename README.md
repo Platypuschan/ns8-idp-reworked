@@ -2,7 +2,7 @@
 
 Stabile Version **0.1.0** (Keycloak 26.8.2); die Vorabversionen 0.1.0-rc.1 bis rc.5 bleiben als Pre-Releases erhalten. Eigenständiges angepasstes Modul mit optionaler Client-Gruppenregel, einstellbar auf der Seite **Zugriff**, optionaler Tokenlaufzeit und optionaler [Anmeldung mit Gerätezertifikat](docs/CERTIFICATES.md); keine externen Identitätsanbieter; keine Aufnahme in den NS8-Katalog.
 
-[Prüfnachweise und Image-Digests](docs/RELEASE-0.1.0-rc.5.md) ([0.1.0-rc.3](docs/RELEASE-0.1.0-rc.3.md), [0.1.0-rc.2](docs/RELEASE-0.1.0-rc.2.md), [0.1.0-rc.1](docs/RELEASE-0.1.0-rc.1.md)) · [Release-Ablauf](docs/PRERELEASE.md) · [Gitea-SSO-Prüfung](docs/GITEA-SSO.md)
+[Prüfnachweise und Image-Digests](docs/RELEASE-0.1.0.md) ([0.1.0-rc.5](docs/RELEASE-0.1.0-rc.5.md), [0.1.0-rc.3](docs/RELEASE-0.1.0-rc.3.md), [0.1.0-rc.2](docs/RELEASE-0.1.0-rc.2.md), [0.1.0-rc.1](docs/RELEASE-0.1.0-rc.1.md)) · [Release-Ablauf](docs/PRERELEASE.md) · [Gitea-SSO-Prüfung](docs/GITEA-SSO.md)
 
 Single sign-on for NethServer 8 applications, based on Keycloak
 
