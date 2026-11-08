@@ -175,9 +175,14 @@ def set_enabled(kc, realm, value, proof=None):
         # Ahead of forms but after the existing SSO cookie; copied subflows,
         # OTP and all required actions retain their original configuration.
         executions = kc.get(endpoint)
-        while next(i for i, e in enumerate(executions) if e['id'] == cert['id']) > 1:
+        # Bounded: a priority change that has no effect must not loop forever
+        for _ in range(len(executions)):
+            if next(i for i, e in enumerate(executions) if e['id'] == cert['id']) <= 1:
+                break
             kc.post(base + '/authentication/executions/' + cert['id'] + '/raise-priority')
             executions = kc.get(endpoint)
+        else:
+            raise CertificateError('flow_order_failed')
         flow = FLOW
     else:
         # Leave a browser flow bound by an administrator in place: disabling

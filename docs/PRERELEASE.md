@@ -1,15 +1,15 @@
-# Vorabversion 0.1.0-rc.6 vorbereiten
+# Version veröffentlichen (Vorabversion oder stabil)
 
-Arbeitsbranch: `claude/configurable-settings` ([PR #22](https://github.com/Platypuschan/ns8-idp-reworked/pull/22)). Getesteter Anwendungsstand unverändert: Keycloak 26.8.1; keine pauschalen Abhängigkeitsupgrades. Die vorigen Abläufe sind in [RELEASE-0.1.0-rc.1.md](RELEASE-0.1.0-rc.1.md) und [RELEASE-0.1.0-rc.2.md](RELEASE-0.1.0-rc.2.md) belegt.
+Arbeitsbranch: `claude/configurable-settings` ([PR #22](https://github.com/Platypuschan/ns8-idp-reworked/pull/22)). Anwendungsstand für 0.1.0: Keycloak 26.8.2 (Sicherheitsupdate gegenüber 26.8.1); keine pauschalen Abhängigkeitsupgrades. Die vorigen Abläufe sind in [RELEASE-0.1.0-rc.1.md](RELEASE-0.1.0-rc.1.md) und [RELEASE-0.1.0-rc.2.md](RELEASE-0.1.0-rc.2.md) belegt.
 
 Nutzerfreigabe 01.11.2026 (Chat): „merge pr, veröffentlich neue versionen zum testen“.
 
 1. PR #22 mit einem Merge-Commit nach `main` übernehmen, nicht per Squash: Vaultwarden pinnt in `IDP_REF` Branch-Commits, die dabei erreichbar bleiben müssen.
-2. `Prepare prerelease` auf dem Merge-Commit von `main` manuell starten. VERSION erlaubt ausschließlich RC-Versionen.
+2. `Prepare prerelease` auf dem Merge-Commit von `main` manuell starten. VERSION erlaubt `X.Y.Z-rc.N` (Pre-Release) und `X.Y.Z` (stabil).
 3. Der Workflow baut Kandidaten (`candidate-<commit>`), veröffentlicht zunächst diese Testimages und referenziert die Keycloak-Runtime im Modul per Digest.
 4. NS8-QEMU muss auf Debian 13 und Rocky 9 erfolgreich sein.
-5. Erst nach grünen Prüfungen werden die geprüften Digests auf `0.1.0-rc.6` kopiert und ein GitHub-Prerelease mit RELEASE_NOTES.md erstellt. Vorhandene Versionstags werden nicht überschrieben. Kein `latest`, keine Katalogaufnahme und kein Produktivrollout.
-6. Danach die Prüfnachweise in `docs/RELEASE-0.1.0-rc.6.md` festhalten und den Kopf der README auf „veröffentlicht“ ändern.
+5. Erst nach grünen Prüfungen werden die geprüften Digests auf `0.1.0-rc.6` kopiert und ein GitHub-Release mit RELEASE_NOTES.md erstellt (RC: Pre-Release, sonst als „Latest“ markiert). Vorhandene Versionstags werden nicht überschrieben. Kein Image-Tag `latest`, keine Katalogaufnahme und kein Produktivrollout.
+6. Danach die Prüfnachweise in `docs/RELEASE-<Version>.md` festhalten und den Kopf der README auf die veröffentlichte Version ändern.
 
 Vaultwarden Reworked braucht weiterhin mindestens `idp-reworked:0.1.0-rc.4`; ein Wechsel seiner Pins auf rc.6 ist eine eigene Aufgabe. Die Pakete `idp-reworked` und `idp-reworked-keycloak` sind bereits öffentlich; neue Tags erben diese Sichtbarkeit.
 

@@ -37,7 +37,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           version="$(cat VERSION)"
-          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$ ]] || exit 64
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]] || exit 64
           base="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
           tag="candidate-${GITHUB_SHA:0:12}"
           printf '%s' "$GH_TOKEN" | podman login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
@@ -84,7 +84,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y skopeo
-      - name: Promote tested digests and create the prerelease
+      - name: Promote tested digests and create the release
         env:
           GH_TOKEN: ${{ github.token }}
           IMAGE: ${{ needs.build.outputs.image }}
@@ -107,4 +107,5 @@ jobs:
             digest="$(skopeo inspect "docker://$source" --format '{{.Digest}}')"
             skopeo copy --preserve-digests "docker://${source%:*}@$digest" "docker://$destination"
           done
-          gh release create "$VERSION" --target "$GITHUB_SHA" --prerelease --title "idp-reworked $VERSION" --notes-file RELEASE_NOTES.md
+          if [[ "$VERSION" == *-rc.* ]]; then channel=--prerelease; else channel=--latest; fi
+          gh release create "$VERSION" --target "$GITHUB_SHA" "$channel" --title "idp-reworked $VERSION" --notes-file RELEASE_NOTES.md
