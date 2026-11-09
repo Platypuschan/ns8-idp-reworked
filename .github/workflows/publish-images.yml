@@ -1,6 +1,11 @@
 name: "Publish images"
 
 on:
+  push:
+    # main publishes :latest, which Test module (workflow_run) installs on QEMU.
+    # Other branches stay manual (workflow_dispatch) and Prepare prerelease
+    # keeps publishing isolated candidate-<sha> tags.
+    branches: [main]
   workflow_dispatch:
 
 permissions:
