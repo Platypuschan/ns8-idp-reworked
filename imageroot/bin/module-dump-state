@@ -1,0 +1,42 @@
+#!/bin/bash
+
+#
+# Copyright (C) 2026 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+# Write a transaction-consistent logical dump of the Keycloak database to
+# state/idp.pg_dump before Restic uploads the state. A failed or empty dump
+# fails the backup: an old dump must never look like a fresh one.
+
+set -Eeuo pipefail
+umask 077
+
+dump_file="idp.pg_dump"
+temporary_dump="${dump_file}.tmp"
+
+cleanup() {
+    rm -f "${temporary_dump}"
+}
+trap cleanup EXIT
+
+# A module that was never configured has no database content to save.
+if [[ -z "${IDP_HOSTNAME:-}" ]]; then
+    echo "idp is not configured yet; nothing to dump" >&2
+    rm -f "${dump_file}"
+    exit 0
+fi
+
+rm -f "${dump_file}"
+echo "Creating a transaction-consistent PostgreSQL dump for Keycloak" >&2
+podman exec postgres sh -ceu \
+    'exec pg_dump --format=custom --no-owner --no-privileges --lock-wait-timeout=30s --username="$POSTGRES_USER" --dbname="$POSTGRES_DB"' \
+    >"${temporary_dump}"
+
+if [[ ! -s "${temporary_dump}" ]]; then
+    echo "The PostgreSQL dump is empty; refusing to publish an invalid backup state." >&2
+    exit 1
+fi
+
+mv -f "${temporary_dump}" "${dump_file}"
+trap - EXIT

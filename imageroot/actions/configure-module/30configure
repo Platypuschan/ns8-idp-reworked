@@ -17,6 +17,8 @@ host = request["host"]
 
 # The Let's Encrypt flag is stored by Traefik in the route
 agent.set_env("IDP_HOSTNAME", host)
+# Not part of the module environment otherwise: restore-module needs it
+agent.set_env("IDP_LETS_ENCRYPT", "1" if request.get("lets_encrypt", False) else "0")
 settings = idpsettings.current(request)
 for name, value in settings.items():
     agent.set_env(idpsettings.env_name(name), "1" if value else "0")

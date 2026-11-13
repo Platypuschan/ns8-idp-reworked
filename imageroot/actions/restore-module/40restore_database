@@ -1,0 +1,79 @@
+#!/bin/bash
+
+#
+# Copyright (C) 2026 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+# Restic has restored state/passwords.env and state/idp.pg_dump. Load the
+# dump into a fresh pgdata volume before the module is configured and started.
+
+set -Eeuo pipefail
+exec 1>&2
+
+dump_file="idp.pg_dump"
+restore_dir="restore"
+restore_script="${restore_dir}/idp_restore.sh"
+
+if [[ -z "${IDP_HOSTNAME:-}" ]]; then
+    echo "The source module was not configured; nothing to restore"
+    exit 0
+fi
+if [[ ! -s "${dump_file}" ]]; then
+    echo "Missing or empty PostgreSQL dump: ${dump_file}"
+    exit 1
+fi
+if [[ ! -s passwords.env ]]; then
+    echo "Missing passwords.env: the database cannot be initialized"
+    exit 1
+fi
+
+# Validate the archive before the destination volume is initialized.
+podman run \
+    --rm \
+    --network=none \
+    --volume="${PWD}:/backup:Z,ro" \
+    "${POSTGRES_IMAGE}" \
+    pg_restore --list "/backup/${dump_file}" >/dev/null
+
+# Start from an empty volume: the data directory of a failed earlier attempt
+# must not be reused with a different password.
+podman volume rm --force pgdata >/dev/null
+
+mkdir -p "${restore_dir}"
+chmod 0755 "${restore_dir}"
+cat >"${restore_script}" <<'RESTORE_SCRIPT'
+#!/bin/bash
+set -Eeuo pipefail
+
+restore_status=0
+pg_restore \
+    --exit-on-error \
+    --no-owner \
+    --no-privileges \
+    --username="$POSTGRES_USER" \
+    --dbname="$POSTGRES_DB" || restore_status=$?
+
+# The restore container is transient: stop the temporary server and return
+# the exact pg_restore status to the NS8 restore action.
+docker_temp_server_stop
+exit "$restore_status"
+RESTORE_SCRIPT
+chmod 0644 "${restore_script}"
+
+podman run \
+    --rm \
+    --interactive \
+    --network=none \
+    --volume="./${restore_dir}:/docker-entrypoint-initdb.d:Z" \
+    --volume=pgdata:/var/lib/postgresql \
+    --replace \
+    --name=restore-db \
+    --env=POSTGRES_USER=keycloak \
+    --env=POSTGRES_DB=keycloak \
+    --env-file=passwords.env \
+    --env=TZ=UTC \
+    "${POSTGRES_IMAGE}" <"${dump_file}"
+
+rm -f "${restore_script}" "${dump_file}"
+rmdir "${restore_dir}" 2>/dev/null || true
