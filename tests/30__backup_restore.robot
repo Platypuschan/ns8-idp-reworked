@@ -61,7 +61,13 @@ Remove the module and restore it from the backup
     ...    return_rc=True    return_stdout=False
     Should Be Equal As Integers    ${rc}    0
     ${repositories} =    Run task    cluster/read-backup-repositories    {}
-    ${path} =    Evaluate    [r['path'] for r in $repositories if r['uuid'] == $module_uuid and r['repository_id'] == $repository][0]
+    ${path} =    Set Variable    ${EMPTY}
+    FOR    ${entry}    IN    @{repositories}
+        IF    $entry['uuid'] == $module_uuid and $entry['repository_id'] == $repository
+            ${path} =    Set Variable    ${entry['path']}
+        END
+    END
+    Should Not Be Empty    ${path}    No backup of ${module_uuid} found in repository ${repository}
     ${payload} =    Evaluate    json.dumps({"repository": $repository, "path": $path, "snapshot": "", "node": 1})    modules=json
     ${output}    ${rc} =    Execute Command    api-cli run restore-module --data '${payload}'
     ...    return_rc=True
