@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2026 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import json
+import sys
+
+import agent
+import idpsettings
+
+request = json.load(sys.stdin)
+original_environment = request["environment"]
+
+# The settings are restored as site policy of the source module. An unset
+# value keeps the module default, as in configure-module.
+for evar in ["IDP_HOSTNAME", "IDP_LETS_ENCRYPT", "IDP_WELCOME_THEME"] + [
+        idpsettings.env_name(name) for name in idpsettings.DEFAULTS]:
+    if evar in original_environment:
+        agent.set_env(evar, original_environment[evar])
+
+agent.dump_env()

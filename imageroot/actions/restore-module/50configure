@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2026 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import json
+import os
+import sys
+
+import agent
+import agent.tasks
+import idpsettings
+
+request = json.load(sys.stdin)
+renv = request["environment"]
+
+if not renv.get("IDP_HOSTNAME"):
+    sys.exit(0)
+
+# Route, certificate transport and discovery belong to the new instance:
+# configure-module recreates them. Keycloak starts at its last step and
+# keycloak-init creates a new ns8-agent secret.
+data = {
+    "host": renv["IDP_HOSTNAME"],
+    "lets_encrypt": renv.get("IDP_LETS_ENCRYPT", "0") == "1",
+}
+for name in idpsettings.DEFAULTS:
+    value = renv.get(idpsettings.env_name(name), "")
+    if value != "":
+        data[name] = value == "1"
+
+result = agent.tasks.run(agent_id=os.environ["AGENT_ID"], action="configure-module", data=data)
+agent.assert_exp(result["exit_code"] == 0, "The configure-module subtask failed!")
