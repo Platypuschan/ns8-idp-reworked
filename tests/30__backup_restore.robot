@@ -9,6 +9,18 @@ Suite Setup    Skip without the module
 ${MARKER_REALM}    backup-marker
 
 *** Keywords ***
+Services are active
+    ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user is-active idp.service postgres.service keycloak.service
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    0
+
+OIDC discovery is served through Traefik
+    ${output}    ${rc} =    Execute Command    curl -fsk --resolve ${IDP_HOST}:443:127.0.0.1 https://${IDP_HOST}/realms/master/.well-known/openid-configuration
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    &{discovery} =    Evaluate    json.loads($output)    modules=json
+    Should Be Equal    ${discovery.issuer}    https://${IDP_HOST}/realms/master
+
 Marker realm is managed
     ${rc} =    Execute Command    runagent -m ${module_id} python3 -c 'import sys, kcadmin; sys.exit(0 if "${MARKER_REALM}" in kcadmin.managed_realms(kcadmin.agent_client()) else 1)'
     ...    return_rc=True    return_stdout=False
