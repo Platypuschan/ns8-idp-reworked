@@ -31,6 +31,18 @@
   ],
   "packageRules": [
     {
+      "description": "Bump only stable module versions for release-effective inputs; RC increments remain manual",
+      "matchFileNames": ["Containerfile", "keycloak-providers/**", "imageroot/**", "ui/**", "build-images.sh"],
+      "bumpVersions": [
+        {
+          "name": "Stable module version",
+          "filePatterns": ["VERSION"],
+          "matchStrings": ["^(?<version>[0-9]+\\.[0-9]+\\.[0-9]+)\\n?$"],
+          "bumpType": "patch"
+        }
+      ]
+    },
+    {
       "description": "Patch updates merge themselves after 7 days once the required checks pass; minor and major stay pull requests",
       "matchUpdateTypes": ["patch"],
       "automerge": true,

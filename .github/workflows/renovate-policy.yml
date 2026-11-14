@@ -1,0 +1,31 @@
+name: Renovate release policy
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  release-version:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Check release-effective changes
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          base="$(git merge-base "$BASE" HEAD)"
+          python3 .github/scripts/check-release-version --base "$base"
+      - run: python3 -m unittest discover -s tests -p test_release_version.py -v
+  renovate-policy:
+    runs-on: ubuntu-26.04
+    container:
+      image: ghcr.io/renovatebot/renovate:44.228.0@sha256:42f814427fdc38f2a104c7d53d1eef62399fbad2d3e6d691076f1ac1d3937ca9
+      options: --user root
+    steps:
+      - uses: actions/checkout@v7
+      - run: renovate-config-validator --strict renovate.json
+      - run: node tests/renovate-policy.mjs

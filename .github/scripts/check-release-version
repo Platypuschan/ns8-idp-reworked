@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+"""Validate the module's VERSION, without publishing or choosing its channel."""
+import argparse
+from pathlib import Path
+import re
+import subprocess
+
+RELEASE_PATHS = ('Containerfile', 'keycloak-providers/', 'imageroot/', 'ui/', 'build-images.sh')
+
+
+def version_key(value):
+    match = re.fullmatch(r'([0-9]+)\.([0-9]+)\.([0-9]+)(?:-rc\.([0-9]+))?', value)
+    if not match:
+        raise ValueError('VERSION must use X.Y.Z or X.Y.Z-rc.N (the prerelease workflow contract)')
+    major, minor, patch, rc = match.groups()
+    return (int(major), int(minor), int(patch), rc is None, int(rc or 0))
+
+
+def check(old, new, paths):
+    old_key, new_key = version_key(old), version_key(new)
+    release_changed = any(p == root or (root.endswith('/') and p.startswith(root))
+                          for p in paths for root in RELEASE_PATHS)
+    if new_key < old_key or (release_changed and new_key == old_key):
+        raise ValueError('Release-effective changes require a newer VERSION; increment RCs manually')
+
+
+def git(*args):
+    return subprocess.check_output(['git', *args], text=True).strip()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--base', required=True, help='PR merge base or previous push SHA')
+    args = parser.parse_args()
+    old = git('show', f'{args.base}:VERSION')
+    paths = git('diff', '--name-only', args.base, 'HEAD').splitlines()
+    check(old, Path('VERSION').read_text().strip(), paths)
+    print('Release VERSION contract passed; publication remains manual')
+
+
+if __name__ == '__main__':
+    main()
