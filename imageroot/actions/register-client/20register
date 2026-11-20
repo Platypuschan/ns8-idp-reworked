@@ -10,6 +10,7 @@ import os
 import sys
 
 import agent
+import idpaccess
 import idprealm
 import kcadmin
 
@@ -57,6 +58,14 @@ with idprealm.realms_lock():
         expected_access_group=request.get("expected_access_group", idprealm.KEEP),
         access_token_lifespan=request.get("access_token_lifespan", idprealm.KEEP),
     )
+
+    if "groups_claim" in request:
+        if not request.get("access_required", False):
+            idprealm.fail_validation("groups_claim", request["groups_claim"], "groups_claim_requires_access_required")
+        try:
+            idpaccess.set_claim_groups(kc, domain, kc.find_client(domain, module_id), request["groups_claim"])
+        except idpaccess.PolicyError as ex:
+            idprealm.fail_validation("groups_claim", request["groups_claim"], ex.code)
 
 json.dump({
     "client_id": module_id,

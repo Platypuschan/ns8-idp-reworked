@@ -29,6 +29,7 @@ either unrestricted, as before, or restricted. It never disables the
 client.
 """
 
+import re
 import sys
 import urllib.parse
 
@@ -147,6 +148,26 @@ def _ensure_token_gate(kc, realm, client):
             "protocolMapper": TOKEN_GATE,
             "config": {},
         })
+
+CLAIM_GROUP_NAME = re.compile(r"^[^/,\r\n]{1,128}$")
+
+def set_claim_groups(kc, realm, client, groups):
+    """Put the current LDAP memberships of a user in the listed groups into
+    the "groups" claim of the tokens of a client. An empty list removes
+    the claim. Only clients with the access policy have the token gate."""
+    groups = list(dict.fromkeys(groups))
+    if not all(isinstance(g, str) and CLAIM_GROUP_NAME.match(g) for g in groups):
+        raise PolicyError("invalid_claim_group")
+    _ensure_token_gate(kc, realm, client)
+    mapper = _token_gates(kc, realm, client)[0]
+    config = dict(mapper.get("config") or {})
+    if groups:
+        config.update({"claim.name": "groups", "claim.groups": ",".join(groups)})
+    else:
+        config.pop("claim.groups", None)
+    if config != (mapper.get("config") or {}):
+        mapper["config"] = config
+        kc.put(f"/{realm}/clients/{client['id']}/protocol-mappers/models/{mapper['id']}", mapper)
 
 def restricted(client):
     return (client.get("attributes") or {}).get(POLICY) == POLICY_GROUP
