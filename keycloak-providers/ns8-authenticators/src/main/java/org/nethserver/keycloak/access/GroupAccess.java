@@ -74,6 +74,29 @@ public final class GroupAccess {
         }
     }
 
+    /** The user with its current LDAP group memberships, or null when they
+     * cannot be read from LDAP only. Used for claims that carry groups: a
+     * cached membership list must never leak into a token. */
+    public static UserModel liveUser(KeycloakSession session, RealmModel realm, UserModel user) {
+        try {
+            if (user == null) {
+                return null;
+            }
+            var cache = session.getProvider(UserCache.class);
+            if (cache != null) {
+                cache.evict(realm, user);
+            }
+            var live = session.users().getUserById(realm, user.getId());
+            if (live == null || live instanceof StorageUnavailableUserModelDelegate || !live.isEnabled()
+                    || !liveMembership(realm, live)) {
+                return null;
+            }
+            return live;
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
     /** The memberships come from LDAP only if the user is federated by a
      * read-only LDAP provider whose group mapper reads them from LDAP only.
      * LDAP_ONLY writes memberships to LDAP when the federation is writable. */

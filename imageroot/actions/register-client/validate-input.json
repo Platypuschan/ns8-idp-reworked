@@ -103,6 +103,17 @@
             "description": "Require a client access group even if its policy is removed. Once enabled, registration never clears this requirement.",
             "default": false
         },
+        "groups_claim": {
+            "description": "LDAP groups whose current memberships the tokens of the client carry in the groups claim, for example gitea-admin. Requires access_required=true. An empty list removes the claim; if the attribute is missing the current setting is kept",
+            "type": "array",
+            "maxItems": 32,
+            "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[^/,\\r\\n]+$"
+            }
+        },
         "expected_access_group": {
             "type": "string",
             "minLength": 1,

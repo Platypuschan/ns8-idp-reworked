@@ -173,6 +173,9 @@ class FakeKeycloak:
     def put(self, path, data=None):
         if '/required-actions/' in path:
             self.action = dict(data)
+        elif '/protocol-mappers/models/' in path:
+            self.mapper_puts = getattr(self, 'mapper_puts', []) + [json.loads(json.dumps(data))]
+            self.mappers = [dict(data) if m['id'] == data['id'] else m for m in self.mappers]
         elif path.endswith('/clients/c1'):
             self.client_puts.append(json.loads(json.dumps(data)))
             if self.fail_put:
@@ -180,6 +183,8 @@ class FakeKeycloak:
             self.client = json.loads(json.dumps(data))
     def delete(self, path, data=None):
         self.mappers = [m for m in self.mappers if not path.endswith('/' + m['id'])]
+        if '/protocol-mappers/models/' in path:
+            return None
 
 
 class PolicyTests(unittest.TestCase):
@@ -190,6 +195,29 @@ class PolicyTests(unittest.TestCase):
         sys.path.insert(0, str(ROOT / 'imageroot/pypkg'))
         import idpaccess
         cls.access = idpaccess
+
+    def test_groups_claim_goes_into_the_token_gate_only(self):
+        kc = FakeKeycloak()
+        client = kc.get('/ad.test/clients/c1')
+        self.access.set_policy(kc, 'ad.test', client, 'engineering')
+        self.access.set_claim_groups(kc, 'ad.test', client, ['gitea-admin', 'gitea-admin', 'ops'])
+        config = kc.mappers[0]['config']
+        self.assertEqual(config['claim.groups'], 'gitea-admin,ops')
+        self.assertEqual(config['claim.name'], 'groups')
+        self.assertEqual(len(kc.mappers), 1)
+        # Unchanged input writes nothing; an empty list removes the claim
+        puts = len(kc.mapper_puts)
+        self.access.set_claim_groups(kc, 'ad.test', client, ['gitea-admin', 'ops'])
+        self.assertEqual(len(kc.mapper_puts), puts)
+        self.access.set_claim_groups(kc, 'ad.test', client, [])
+        self.assertNotIn('claim.groups', kc.mappers[0]['config'])
+
+    def test_groups_claim_rejects_unsafe_names(self):
+        kc = FakeKeycloak()
+        client = kc.get('/ad.test/clients/c1')
+        for bad in (['a,b'], ['/x'], [''], ['x\ny'], [5]):
+            with self.subTest(bad=bad), self.assertRaises(self.access.PolicyError):
+                self.access.set_claim_groups(kc, 'ad.test', client, bad)
 
     def test_policy_is_set_by_one_update_after_its_checks(self):
         kc = FakeKeycloak()

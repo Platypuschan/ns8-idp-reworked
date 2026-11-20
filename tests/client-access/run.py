@@ -344,6 +344,29 @@ class LoginTests(unittest.TestCase):
         finally:
             cmd('podman','exec',self.samba,'samba-tool','group','addmembers','services_vaultwarden','allowed')
 
+    def test_08b_groups_claim_is_live_and_limited(self):
+        import json as _json
+        client=self.kc.find_client('ad.test','vaultwarden1')
+        idpaccess.set_claim_groups(self.kc,'ad.test',client,['services_vaultwarden','no_such_group'])
+        token_url=self.url+'/realms/ad.test/protocol/openid-connect/token'
+        def claims():
+            _,_,target,verifier=self.auth('allowed')
+            self.assertIn('code=',target or '')
+            r=requests.post(token_url,data={
+                'grant_type':'authorization_code','client_id':'vaultwarden1','client_secret':self.secret,
+                'code':parse_qs(urlsplit(target).query)['code'][0],
+                'redirect_uri':self.vw_url+'/identity/connect/oidc-signin','code_verifier':verifier},timeout=20)
+            self.assertEqual(r.status_code,200)
+            out=[]
+            for name in ('id_token','access_token'):
+                part=r.json()[name].split('.')[1]
+                out.append(_json.loads(base64.urlsafe_b64decode(part+'='*(-len(part)%4))).get('groups'))
+            return out
+        # Only the listed groups the user is a member of, in both tokens
+        self.assertEqual(claims(),[['services_vaultwarden']]*2)
+        idpaccess.set_claim_groups(self.kc,'ad.test',self.kc.find_client('ad.test','vaultwarden1'),[])
+        self.assertEqual(claims(),[None,None])
+
     def test_09_cached_user_revocation_and_regrant(self):
         # The LDAP cache stays enabled: warm it with a login to another client,
         # then check that membership changes apply to the next login at once.
