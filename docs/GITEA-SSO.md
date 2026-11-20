@@ -1,26 +1,41 @@
-# Gitea an IdP Reworked anbinden – Machbarkeitsprüfung
+# Gitea behind IdP Reworked
 
-Stand: 25.10.2026. Gitea-Modul: Platypuschan/ns8-gitea-reworked main d10a86cf54df7d394c67db52c358db8efd992656, Runtime docker.gitea.com/gitea:28.0.0. Nur Code-/Dokumentationsprüfung, keine Änderung an einer laufenden Instanz und kein vollständiger Gitea-OIDC-Test.
+Status: implemented in the Gitea module
+([ns8-gitea-reworked](https://github.com/Platypuschan/ns8-gitea-reworked) 0.4.20
+and newer; this IdP 0.1.2 or newer for the groups claim). The module's README
+section *Single sign-on with idp-reworked* is the user documentation; this
+page records what the IdP side provides.
 
-## Ergebnis
+## What Gitea uses
 
-Ja. Gitea unterstützt OIDC als zusätzliche OAuth2-Anmeldequelle mit Discovery. Ein zentraler Reverse-Proxy-Login ist dafür nicht nötig. Beispiel-Quellenname `ns8-sso`, Callback `https://git.example.org/user/oauth2/ns8-sso/callback`, Discovery `https://sso.example.org/realms/ad.example.org/.well-known/openid-configuration`, Scopes `profile email` (`openid` wird ergänzt).
+- `register-client` with the module's own authorization
+  `idp-reworked@any:clientadm`. The client ID is the module ID, the callback is
+  `https://<host>/user/oauth2/ns8-sso/callback`.
+- `access_required: true`. The client has no usable access policy until an
+  administrator selects an LDAP group on the **Access** page
+  (`alter-realm-client`, `access_group`); until then every login is refused.
+  The requirement is never cleared by a later registration, so a client that
+  is deleted and registered again (for example after the module lost and
+  regained its user domain) comes back closed, not open.
+- `groups_claim: ["<group>"]` (optional, IdP 0.1.2): the token gate adds the
+  claim `groups` to ID token, access token and userinfo with the user's
+  **current** LDAP memberships in the listed groups only. The memberships are
+  read from LDAP for each token, never from the Keycloak user cache; without
+  an LDAP-only membership read the claim is empty. Gitea maps it to
+  administrator rights (`--group-claim-name groups --admin-group <group>`).
 
-Der Administrator kann den an die Domäne gebundenen Gitea-Modulclient mit `register-client` (explizites module_id im Administratorkontext) registrieren und optional über `alter-realm-client` auf eine eigene direkte AD-Gruppe beschränken. Client-Secret sicher in der Gitea-OIDC-Quelle hinterlegen. Eine Gruppenregel ist unabhängig von Gruppen-Claims: der IdP beschränkt die Anmeldung, liefert aber derzeit keinen allgemeinen Gruppen-Claim für Gitea-Team-/Adminzuordnungen.
+## What the IdP does not do
 
-## Vorhandene Konten erhalten
+- It does not end sessions, personal access tokens or SSH keys that Gitea
+  issued. Removing a user from the access group blocks new SSO logins and token
+  issuance at the IdP only.
+- It deletes the client of a module that is no longer bound to the user
+  domain, together with its access group. Deleting the source in Gitea or
+  switching SSO off in the module therefore does not unbind the domain.
 
-Das Modul verwaltet eine LDAP-BindDN-Quelle und einen Recovery-Administrator. Seine Reconciliation (`imageroot/bin/gitea_auth.py`, managed_source/reconcile) lässt anders benannte OAuth2-Quellen bestehen; der Name der verwalteten LDAP-Quelle darf nicht für OIDC wiederverwendet werden.
+## Deployments
 
-Für bestehende LDAP-Benutzer muss OIDC mit genau demselben Gitea-Konto verknüpft werden. Giteas ACCOUNT_LINKING=login verlangt eine Anmeldung zum Verknüpfen und vermeidet eine pauschale automatische Verknüpfung allein anhand Benutzername/E-Mail. Erst anhand existierender IDs, Repository-Besitz und Berechtigungen prüfen, dass keine neuen Parallelkonten entstehen. LDAP-Quelle und Recovery-Administrator während der Einführung erhalten.
-
-## Grenzen
-
-SSO beim Web-Login ersetzt weder Git-SSH-Schlüssel noch persönliche API-Tokens und setzt bestehende Gitea-Websitzungen nicht automatisch außer Kraft. Entzug der IdP-Gruppe allein ist deshalb keine vollständige Sperre eines bestehenden Gitea-Kontos. Gitea-Kontosperre, vorhandene Sessions, Tokens und SSH-Zugang benötigen eine gesonderte Richtlinie.
-
-Automatisierte Modulkonfiguration fehlt derzeit: Metadaten um `idp-reworked@any:clientadm` ergänzen, Domänenbindung und OIDC-Registrierung einbauen, private Secrets sowie optionalen Gruppenstatus verwalten und im Backend/UI konfigurierbar machen. Wiederkonfiguration, Restore/Klon, IdP-Wechsel, Account-Linking und Git-Zugänge testen. Das ist ein möglicher Folgeauftrag, kein hier implementierter Umbau.
-
-Quellen:
-- https://docs.gitea.com/administration/authentication/#oauth2-and-openid-connect
-- https://docs.gitea.com/administration/config-cheat-sheet/#oauth2-client-oauth2_client
-- https://github.com/Platypuschan/ns8-gitea-reworked/blob/d10a86cf54df7d394c67db52c358db8efd992656/imageroot/bin/gitea_auth.py
+One IdP instance per Gitea instance is supported by the module. A second
+IdP instance with the same realm works on its own, but user IDs (`sub`)
+differ between instances; accounts are linked by user name through
+`ACCOUNT_LINKING=auto`, so it would need a second source and login button.
